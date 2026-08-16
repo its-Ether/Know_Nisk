@@ -247,4 +247,23 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('nisk'), findsOneWidget);
   });
+
+  testWidgets('Home holds up on a narrow phone-width screen', (tester) async {
+    // 360x800 @1x — the narrowest common phone. The header must wrap the
+    // social icons onto their own line instead of overflowing.
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // Everything still renders: profile block + icons + counter.
+    expect(find.text('N1SK'), findsOneWidget);
+    expect(find.text('Nisk.Niship'), findsOneWidget);
+    expect(find.text('0 views'), findsOneWidget);
+    expect(find.byIcon(FontAwesomeIcons.github), findsOneWidget);
+    expect(find.text('tab4'), findsOneWidget);
+  });
 }

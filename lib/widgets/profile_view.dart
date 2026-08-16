@@ -164,16 +164,23 @@ class ProfileView extends StatelessWidget {
                 padding: EdgeInsets.only(top: _coverHeight - _avatarRadius),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    // Keeps the social icons aligned with the bottom of column 1.
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  child: Wrap(
+                    // Wide: one line — profile block left, social icons
+                    // right, icons vertically centered against the whole
+                    // column. Narrow: the icons wrap to their own line,
+                    // right-aligned, so the header never overflows.
+                    alignment: WrapAlignment.spaceBetween,
+                    runAlignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 16,
+                    runSpacing: 12,
                     children: [
                       // Row 2: column 1 (avatar, name, username) plus the
-                      // views counter — 32px gap, vertically centered so the
-                      // eye + count sits in the middle of the column.
+                      // views counter — 32px gap; the counter is bottom-aligned
+                      // with a lift so it sits beside the profile name.
                       Row(
                         mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           // Column 1: avatar, name and username, centered.
                           Column(
@@ -251,40 +258,43 @@ class ProfileView extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(width: 32),
-                          // Views counter — moved up from below the bio to
-                          // sit centered beside column 1.
-                          const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.visibility,
-                                size: 18,
-                                color: Colors.white70,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                '0 views',
-                                style: TextStyle(
-                                  fontSize: 15,
+                          // Views counter — bottom-aligned in row 2 with a
+                          // lift so it lines up with the profile name (the
+                          // row's bottom is the username's bottom, the name
+                          // sits just above it). Fixed relative to the
+                          // column, so the alignment holds at any width.
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 28),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.visibility,
+                                  size: 18,
                                   color: Colors.white70,
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 6),
+                                Text(
+                                  '0 views',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                      const Spacer(),
                       // Social media handle icons. On Home they open their
                       // published links in a new tab; in the editor (when
                       // onSocialTap is set) a tap opens the link editor
                       // popup instead. The admin editor also appends its
                       // Publish control to this row while unsaved changes
                       // exist.
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                             _SocialIcon(
                               icon: FontAwesomeIcons.facebookF,
                               label: 'Facebook',
@@ -316,7 +326,6 @@ class ProfileView extends StatelessWidget {
                               ),
                           ],
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -470,20 +479,25 @@ class _TabLabel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: Colors.blue),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  color: selected ? Colors.white : Colors.white54,
+          // Scales the label down (never up) if it can't fit, so the tab
+          // row never overflows on very narrow screens.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: Colors.blue),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    color: selected ? Colors.white : Colors.white54,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 10),
           Container(
