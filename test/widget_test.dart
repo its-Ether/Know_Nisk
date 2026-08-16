@@ -248,6 +248,23 @@ void main() {
     expect(find.text('nisk'), findsOneWidget);
   });
 
+  testWidgets('social icons sit on the far right, level with the name', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const KnowN1SKApp());
+
+    // The icons stay on the right side of the screen — right of the views
+    // counter and in the right half of the 800px test surface.
+    final githubCenter = tester.getCenter(find.byIcon(FontAwesomeIcons.github));
+    final viewsCenter = tester.getCenter(find.text('0 views'));
+    expect(githubCenter.dx, greaterThan(viewsCenter.dx));
+    expect(githubCenter.dx, greaterThan(400));
+
+    // Level with the views counter — both sit at the profile name, not
+    // mid-column and not hugging the bio below.
+    expect((githubCenter.dy - viewsCenter.dy).abs(), lessThan(10));
+  });
+
   testWidgets('Home holds up on a narrow phone-width screen', (tester) async {
     // 360x800 @1x — the narrowest common phone. The header must wrap the
     // social icons onto their own line instead of overflowing.

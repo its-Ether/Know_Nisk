@@ -13,8 +13,8 @@ The list of works achieved so far in the development.
 - [x] Views counter ([eye] 0 views) moved out of the profile block below the bio
 - [x] Column 1 (avatar, name, username) wrapped into its own **row 2**: column 1 + **32px gap** + views counter
 - [x] Views counter is **bottom-aligned in row 2 with a small lift** so it lines up with the profile name (and the username below it) — fixed relative to the column, so it holds at any window size
-- [x] **Social media icon row alignment changed bottom → center** (vertically centered against the whole profile block)
-- [x] **Responsive:** the header is now a `Wrap` — on narrow screens the social icons wrap onto their own right-aligned line instead of overflowing; tab labels scale down (`FittedBox`) rather than overflow; nothing mismatches on resize
+- [x] **Social media icon row stays on the right side of the screen, aligned with the profile name** — same bottom-lift as the views counter so both sit level with the name (not bottom-hugging the bio, not centered mid-column)
+- [x] **Responsive:** below ~430px padded width the social icons drop to their own right-aligned line (LayoutBuilder breakpoint) instead of overflowing; tab labels scale down (`FittedBox`) rather than overflow; nothing mismatches on resize
 - [x] Applied in the shared `ProfileView` — Home + admin editor match
 - [x] Verified: analyze clean, **13/13 widget tests pass** (1 new: narrow phone-width screen, no overflow)
 - Pending N1SK: approval

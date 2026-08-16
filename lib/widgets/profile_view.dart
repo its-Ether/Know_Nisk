@@ -67,6 +67,15 @@ class ProfileView extends StatelessWidget {
   static const double _coverHeight = 200;
   static const double _avatarRadius = 56;
 
+  /// Below this padded header width the social icons drop to their own
+  /// right-aligned line instead of sharing the row with the profile block.
+  static const double _headerOneLineMinWidth = 430;
+
+  /// Vertical lift that aligns a bottom-anchored element with the profile
+  /// name — used for both the views counter and the social icons so they
+  /// sit level with the name.
+  static const double _nameAlignLift = 28;
+
   static const String _fallbackBio =
       'Aspiring developer and creator building my presence online, '
       'one project at a time. Exploring new technologies, design, '
@@ -118,6 +127,137 @@ class ProfileView extends StatelessWidget {
             ? _formatDate(content!.updatedAt!)
             : _formatDate(DateTime.now());
 
+    // Row 2: column 1 (avatar, name, username) plus the views counter —
+    // 32px gap; the counter is bottom-aligned with a lift so it sits
+    // beside the profile name (the row's bottom is the username's bottom,
+    // the name sits just above it). Fixed relative to the column, so the
+    // alignment holds at any width.
+    final row2 = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Column 1: avatar, name and username, centered.
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: onAvatarTap,
+              child: CircleAvatar(
+                radius: _avatarRadius,
+                backgroundColor: Colors.white10,
+                backgroundImage: avatarBytes != null
+                    ? MemoryImage(avatarBytes!)
+                    : avatarUrl.isEmpty
+                        ? const AssetImage('assets/avatar_placeholder.png')
+                        : NetworkImage(avatarUrl),
+                // A failed load keeps the placeholder fallback.
+                onBackgroundImageError: avatarBytes != null ||
+                        avatarUrl.isNotEmpty
+                    ? (_, _) {}
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (editingName && nameController != null)
+              SizedBox(
+                width: 220,
+                child: TextField(
+                  controller: nameController,
+                  autofocus: true,
+                  textAlign: TextAlign.center,
+                  cursorColor: Colors.white70,
+                  style: const TextStyle(
+                    fontFamily: 'Sekuya',
+                    fontSize: 28,
+                    color: Colors.white,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    hintText: 'Name',
+                    hintStyle: const TextStyle(
+                      fontFamily: 'Sekuya',
+                      fontSize: 28,
+                      color: Colors.white24,
+                    ),
+                  ),
+                  onTapOutside: (_) => onNameEditDone?.call(),
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: onNameTap,
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontFamily: 'Sekuya',
+                    fontSize: 28,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 4),
+            Text(
+              'Nisk.Niship',
+              style: GoogleFonts.courierPrime(
+                fontSize: 13,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 32),
+        const Padding(
+          padding: EdgeInsets.only(bottom: _nameAlignLift),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.visibility, size: 18, color: Colors.white70),
+              SizedBox(width: 6),
+              Text(
+                '0 views',
+                style: TextStyle(fontSize: 15, color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    // Row 1: the social handle icons. On Home they open their published
+    // links in a new tab; in the editor (when onSocialTap is set) a tap
+    // opens the link editor popup instead. The admin editor also appends
+    // its Publish control to this row while unsaved changes exist.
+    final socialIcons = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _SocialIcon(
+          icon: FontAwesomeIcons.facebookF,
+          label: 'Facebook',
+          url: content?.facebookUrl ?? '',
+          onTap: onSocialTap == null ? null : () => onSocialTap!('facebook'),
+        ),
+        _SocialIcon(
+          icon: FontAwesomeIcons.xTwitter,
+          label: 'X',
+          url: content?.xUrl ?? '',
+          onTap: onSocialTap == null ? null : () => onSocialTap!('x'),
+        ),
+        _SocialIcon(
+          icon: FontAwesomeIcons.github,
+          label: 'GitHub',
+          url: content?.githubUrl ?? '',
+          onTap: onSocialTap == null ? null : () => onSocialTap!('github'),
+        ),
+        if (publishButton != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: publishButton!,
+          ),
+      ],
+    );
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -164,169 +304,43 @@ class ProfileView extends StatelessWidget {
                 padding: EdgeInsets.only(top: _coverHeight - _avatarRadius),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Wrap(
-                    // Wide: one line — profile block left, social icons
-                    // right, icons vertically centered against the whole
-                    // column. Narrow: the icons wrap to their own line,
-                    // right-aligned, so the header never overflows.
-                    alignment: WrapAlignment.spaceBetween,
-                    runAlignment: WrapAlignment.end,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 16,
-                    runSpacing: 12,
-                    children: [
-                      // Row 2: column 1 (avatar, name, username) plus the
-                      // views counter — 32px gap; the counter is bottom-aligned
-                      // with a lift so it sits beside the profile name.
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          // Column 1: avatar, name and username, centered.
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              GestureDetector(
-                                onTap: onAvatarTap,
-                                child: CircleAvatar(
-                                  radius: _avatarRadius,
-                                  backgroundColor: Colors.white10,
-                                  backgroundImage: avatarBytes != null
-                                      ? MemoryImage(avatarBytes!)
-                                      : avatarUrl.isEmpty
-                                          ? const AssetImage(
-                                              'assets/avatar_placeholder.png',
-                                            )
-                                          : NetworkImage(avatarUrl),
-                                  // A failed load keeps the placeholder fallback.
-                                  onBackgroundImageError:
-                                      avatarBytes != null ||
-                                              avatarUrl.isNotEmpty
-                                          ? (_, _) {}
-                                          : null,
-                                ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Wide enough: one line — row 2 (profile block) on the
+                      // left, row 1 (social icons) pushed to the far right,
+                      // aligned with the profile name. Too narrow for one
+                      // line: the icons drop to their own right-aligned line
+                      // so nothing ever overflows.
+                      if (constraints.maxWidth >= _headerOneLineMinWidth) {
+                        return Row(
+                          // Bottom-aligned with the same lift as the views
+                          // counter, so the icons sit level with the name
+                          // (not centered mid-column, not touching the bio).
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            row2,
+                            const Spacer(),
+                            Padding(
+                              padding: EdgeInsets.only(
+                                bottom: _nameAlignLift,
                               ),
-                              const SizedBox(height: 12),
-                              if (editingName && nameController != null)
-                                SizedBox(
-                                  width: 220,
-                                  child: TextField(
-                                    controller: nameController,
-                                    autofocus: true,
-                                    textAlign: TextAlign.center,
-                                    cursorColor: Colors.white70,
-                                    style: const TextStyle(
-                                      fontFamily: 'Sekuya',
-                                      fontSize: 28,
-                                      color: Colors.white,
-                                    ),
-                                    decoration: InputDecoration(
-                                      isDense: true,
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.zero,
-                                      hintText: 'Name',
-                                      hintStyle: const TextStyle(
-                                        fontFamily: 'Sekuya',
-                                        fontSize: 28,
-                                        color: Colors.white24,
-                                      ),
-                                    ),
-                                    onTapOutside: (_) =>
-                                        onNameEditDone?.call(),
-                                  ),
-                                )
-                              else
-                                GestureDetector(
-                                  onTap: onNameTap,
-                                  child: Text(
-                                    name,
-                                    style: const TextStyle(
-                                      fontFamily: 'Sekuya',
-                                      fontSize: 28,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Nisk.Niship',
-                                style: GoogleFonts.courierPrime(
-                                  fontSize: 13,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 32),
-                          // Views counter — bottom-aligned in row 2 with a
-                          // lift so it lines up with the profile name (the
-                          // row's bottom is the username's bottom, the name
-                          // sits just above it). Fixed relative to the
-                          // column, so the alignment holds at any width.
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 28),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.visibility,
-                                  size: 18,
-                                  color: Colors.white70,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  '0 views',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ],
+                              child: socialIcons,
                             ),
+                          ],
+                        );
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          row2,
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: socialIcons,
                           ),
                         ],
-                      ),
-                      // Social media handle icons. On Home they open their
-                      // published links in a new tab; in the editor (when
-                      // onSocialTap is set) a tap opens the link editor
-                      // popup instead. The admin editor also appends its
-                      // Publish control to this row while unsaved changes
-                      // exist.
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                            _SocialIcon(
-                              icon: FontAwesomeIcons.facebookF,
-                              label: 'Facebook',
-                              url: content?.facebookUrl ?? '',
-                              onTap: onSocialTap == null
-                                  ? null
-                                  : () => onSocialTap!('facebook'),
-                            ),
-                            _SocialIcon(
-                              icon: FontAwesomeIcons.xTwitter,
-                              label: 'X',
-                              url: content?.xUrl ?? '',
-                              onTap: onSocialTap == null
-                                  ? null
-                                  : () => onSocialTap!('x'),
-                            ),
-                            _SocialIcon(
-                              icon: FontAwesomeIcons.github,
-                              label: 'GitHub',
-                              url: content?.githubUrl ?? '',
-                              onTap: onSocialTap == null
-                                  ? null
-                                  : () => onSocialTap!('github'),
-                            ),
-                            if (publishButton != null)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 16),
-                                child: publishButton!,
-                              ),
-                          ],
-                        ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),
