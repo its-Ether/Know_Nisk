@@ -1,0 +1,159 @@
+# Completed.txt — Works Achieved
+
+The list of works achieved so far in the development.
+
+- A list ends with `~ Completed` only after N1SK approves it.
+- On approval, all `[x]` checkboxes in the list are upgraded to `[✅]` and the list ends with `~ Completed`.
+- When a new task is given, a new list is added at the TOP (newest first — no scrolling needed) and work continues on that list. Older lists sit below.
+
+---
+
+## Task 13: Font Tweak — Name to Sekuya, Username Smaller, Bio Bigger
+- [x] Profile name font changed **Anton → Sekuya** (designed by SEKUYA). Sekuya is NOT in google_fonts' bundled font list — even `GoogleFonts.getFont('Sekuya')` throws "No font family by name" — so the font is bundled locally: `assets/fonts/Sekuya-Regular.ttf` (OFL-licensed, downloaded from fonts.gstatic.com), registered in pubspec.yaml as the `Sekuya` family, and the name renders via `TextStyle(fontFamily: 'Sekuya')`. Loads instantly with the app — no runtime fetch
+- [x] Username (**Courier Prime**) shrunk 15 → 13px
+- [x] Bio (**Caveat**) enlarged 17 → 19px
+- [x] Bio font changed **Caveat → Comfortaa** (Johan Aakerlund), sized 19 → 15px, weight **bold → regular**
+- [x] Bio is now **bold** (Caveat ships weights up to 700, so a real bold renders); username color changed white60 → **blue** (matches the tab-icon/focus accent)
+- [x] All changes applied in the shared `ProfileView` — Home and the admin editor (name, name hint, bio, bio hint) match
+- Pending N1SK: approval
+
+---
+
+## Task 12: Font Refresh + Social Handle Links
+- [✅] Profile fonts updated via Google Fonts — applied once in the shared `ProfileView`, so Home and the admin editor change together: profile name **Anton** (Vernon Adams), bio **Caveat** (Impallari Type, sized up to 17px so the script stays readable), username **Courier Prime** (Alan Dague-Greene)
+- [✅] `SiteContent` gained `facebookUrl` / `xUrl` / `githubUrl` (stored in `admin/site`, empty string = not set)
+- [✅] Admin editor: tapping a social icon opens a popup card — non-editable icon followed by the link text field; Save closes the popup and reveals the Publish pill (only when the link actually changed); Publish writes the links to `admin/site`
+- [✅] Home page: tapping a social icon opens its link in a **new tab** (`url_launcher`, `webOnlyWindowName: '_blank'`); bare domains get `https://` prepended; icons with no link are inert; launch failures are swallowed so a bad link never breaks the page
+- [✅] Verified: analyze clean, 12/12 widget tests pass (2 new: link-popup Save reveals Publish; Home icon tap with a link is a safe no-op in tests), `flutter build web` succeeds
+~ Completed
+
+---
+
+## Task 11: Follow-ups — Admin Account, Empty-Bio Fix, Publish in Icons Row
+- [✅] N1SK created the admin account in the Firebase console (Email/Password) — sign-in at `/admin` works; Tasks 9 & 10 are now fully unblocked end-to-end
+- [✅] Fixed the empty-bio bug: publishing before writing a bio left `admin/site.bio` as an empty string, which rendered as an invisible, untappable bio — N1SK could not edit it. An empty/missing bio now falls back to the approved placeholder text on Home and in the editor, so there is always something visible to tap; the bio field shows a "Write a bio…" hint while empty
+- [✅] Moved the Publish pill out of the floating screen position into the social icons row (right of the GitHub icon) — it still appears only while there are unsaved changes, and shows a small spinner instead of a full-screen one while publishing
+- [✅] Verified: analyze clean, 10/10 widget tests pass (2 new: empty-bio fallback is tappable in the editor; Publish pill sits in the icons row next to the GitHub icon), `flutter build web` succeeds
+~ Completed
+
+---
+
+## Task 10: Admin Editor — Edit Cover / Avatar / Name / Bio → Publish Live to Home
+- [✅] Added `cloud_firestore`, `firebase_storage`, `image_picker` and `image` dependencies
+- [✅] Firestore rules live (`admin` collection: public read, signed-in write) — document `admin/site` holds the site content; public read confirmed against the live project
+- [✅] Storage rules live (`images/` folder: public read, signed-in write) — editor uploads cover/avatar there
+- [✅] New `lib/site_content_service.dart`: `SiteContent` model + `SiteContentState` (in-memory notifier, Firebase-free like AuthState, so tests run without a Firebase app) + `SiteContentService` (watch Firestore, upload to Storage, publish)
+- [✅] Home page renders content from Firestore via the stream — cover, avatar, name, bio and the last-published date; falls back to the approved placeholder art/text until the first publish, and updates live while the page is open
+- [✅] `/admin-editor` IS the Home page — it renders the exact Home structure (shared `lib/widgets/profile_view.dart` used verbatim by both pages, so the editor can never drift from Home): cover, overlapping avatar, Name (Playball), username, bio, updated-on, 0 views, divider, tab1–tab4. No form chrome — nothing changes visually on entry
+- [✅] Tap-to-edit: tapping the cover or avatar opens the image picker (picked image is downscaled — 1200px cover / 512px avatar — and re-encoded to JPEG/PNG before upload); tapping the Name or Bio swaps that element in place to an identically-styled text field (autofocus, Playball for the name), tap outside to finish
+- [✅] A **Publish** pill (white, X-style) appears in the social icons row only when something has actually changed, and uploads images to Storage then writes `admin/site` — the public Home page picks it up live. Success SnackBar with a "View" action; red error SnackBar on failure
+- [✅] Fixed: tapping a field no longer shows Publish — controller listeners fire on selection/focus too, so the dirty check compares against the last-synced text instead of any notification
+- [✅] Fixed the image bug: uploaded images uploaded fine but never displayed on Flutter web. Root cause: Storage media downloads returned no CORS headers, and CanvasKit's `Image.network` (XHR) silently blocked them (placeholders showed instead). Set the bucket's CORS policy via the GCS JSON API — `access-control-allow-origin: *` confirmed; the actual uploaded files now render (verified by pixel-sampling the live page)
+- [✅] Verified: analyze clean, 9/9 tests pass (tap-to-edit test also asserts the Publish pill does NOT appear on tap alone), `flutter build web` succeeds, full browser E2E: sign in at `/admin` → editor renders as exact Home replica → tap name → type → Publish appears → publish → `admin/site` updated (server timestamp) → Home shows the new name live
+- [✅] Live state after testing: `admin/site` exists with name "nisk" and two uploaded images (cover/avatar) — N1SK can replace them anytime via the editor. Diagnostic test artifacts (`admin/diag-test`, `images/diag-test.png`) deleted; test user `zcode-diag-20260816@test.local` remains only to be removed by N1SK (needs console access)
+- [✅] N1SK created the admin account in the Firebase console (Email/Password) — the sign-in → editor → publish flow is now fully usable end-to-end
+~ Completed
+
+---
+
+## Task 9: Admin Editor — Signed-In-Only /admin-editor Route
+- [✅] Approved Tasks 6–8 (go_router routing, Firebase connection, admin sign-in) — all flipped to `~ Completed`
+- [✅] New blank page `lib/pages/admin_editor_page.dart` served at `/admin-editor` (black scaffold from the theme, zero content — the editor UI comes in a later task)
+- [✅] Successful sign-in on `/admin` now redirects straight to `/admin-editor` (the inline "Signed in as" state on the admin page is gone)
+- [✅] `/admin-editor` is signed-in access only: logged-out visitors are redirected to the Home screen (`/`)
+- [✅] Auth state lives in `lib/auth_state.dart` (AuthState singleton): seeded from `FirebaseAuth.instance.currentUser` in `main()` and kept in sync via `authStateChanges()` — FirebaseAuth is still never touched during build, so tests run without a Firebase app
+- [✅] Verified: analyze clean, 9/9 tests pass (2 new: redirect-to-home when logged out, blank editor when signed in)
+- [✅] N1SK enabled Email/Password and created the admin user in the Firebase console — signing in now lands on `/admin-editor`
+~ Completed
+
+---
+
+## Task 8: Admin Sign-in — Email & Password Auth
+- [✅] Added `firebase_auth` dependency
+- [✅] `/admin` now shows a minimal sign-in form on the black background: "Admin" title, Email + Password fields (dark fill, white24 borders, blue focus accent), white "Sign in" button (X-style), Enter submits
+- [✅] No sign-up anywhere — the only path in is an existing credential (N1SK creates users manually in the Firebase console)
+- [✅] After sign-in the page shows a minimal "Signed in as <email>" state with a Sign out button
+- [✅] Friendly error messages (invalid credentials, invalid email, rate limiting, network)
+- [✅] `FirebaseAuth` is only touched in button handlers, never during build — widget tests render the page without a Firebase app
+- [✅] Verified: analyze clean, 7/7 tests pass, real-browser check confirms the centered form renders on the black background
+- Pending N1SK: enable Email/Password in Firebase console (Authentication → Sign-in method) and create the admin user (Users → Add user)
+~ Completed
+
+---
+
+## Task 7: Firebase Connection — know-n1sk Project
+- [✅] Added `firebase_core` dependency
+- [✅] Registered a Firebase web app on project `know-n1sk` (app ID `1:947354257154:web:723e27a5d85e4130f4a41b`) via `flutterfire configure --platforms=web`
+- [✅] Generated `lib/firebase_options.dart` with the web config (project `know-n1sk`, authDomain `know-n1sk.firebaseapp.com`)
+- [✅] `main()` now initializes Firebase before `runApp` (`Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)`) — connection is live in the running app
+- [✅] Hosting configured: `firebase.json` (public `build/web`, single-page rewrite `**` → `/index.html` so `/admin` deep links work in production) + `.firebaserc` pinned to `know-n1sk`
+- [✅] Verified: analyze clean, 7/7 tests pass, `flutter build web` succeeds, `firebase deploy --only hosting --dry-run` passes
+- Hosting URL: https://know-n1sk.web.app · Project console: https://console.firebase.google.com/project/know-n1sk/overview
+~ Completed
+
+---
+
+## Task 6: Admin Page — go_router Routing
+- [✅] Added `go_router` to pubspec dependencies
+- [✅] Created `lib/pages/admin_page.dart` — completely blank admin page, black scaffold background from the theme (same as Home)
+- [✅] App now uses `MaterialApp.router` with a GoRouter route table: `/` → HomePage, `/admin` → AdminPage
+- [✅] Added a widget test verifying `/admin` routes to a blank AdminPage (HomePage absent, single Scaffold)
+- [✅] Fixed `/admin` loading Home instead of the blank page: Flutter web's default hash URL strategy ignored the path after the host, so `/admin` fell back to `/`. Added `usePathUrlStrategy()` (from `flutter_web_plugins`) so clean paths like `/admin` are read from the browser URL.
+- [✅] Verified: analyze clean, all 7 widget tests pass; real-browser check confirms `/admin` shows a pure-black blank page (computed background `rgb(0, 0, 0)`, zero text)
+~ Completed
+
+---
+
+## Task 5: Profile Name — Playball Google Font
+- [✅] Added `google_fonts` to pubspec dependencies
+- [✅] Imported `package:google_fonts/google_fonts.dart` in `home_page.dart`
+- [✅] Profile Name **N1SK** now renders in the Playball script font (`GoogleFonts.playball`, size 28, white) — bold dropped since Playball has only a regular weight
+- [✅] Widget tests set `GoogleFonts.config.allowRuntimeFetching = false` (tests can't fetch fonts over HTTP)
+- [✅] Verified: analyze clean, all 6 widget tests pass, web build succeeds
+~ Completed
+
+---
+
+## Task 4: Home Page — X-style Profile Elements
+- [✅] Username **Nisk.Niship** sits below the Name, inside the same column 1 as avatar + name
+- [✅] Placeholder bio (3-4 lines) below the profile block
+- [✅] "Updated on: Today's Date" (dynamic, e.g. "Updated on: August 16, 2026") — like X profile
+- [✅] "0 views" instead of a followers count (real counter comes later with logic)
+- [✅] Tabs tab1 / tab2 / tab3 / tab4 below the profile block (first tab selected with underline)
+- [✅] Everything except the avatar/name/username column spans full width with minimal left/right padding (16px)
+- [✅] Screen background is pure black (#000000) — one uniform screen, no visible bands
+- [✅] "0 views" shows an eye icon before the text
+- [✅] Tabs have placeholder icons in blue (article / photo / play / star)
+- [✅] No empty space between bio and username — cover + header live in one Stack (header row pushed down by coverHeight − avatarRadius so the avatar overlaps the cover in real layout; the row drives the stack height)
+- [✅] Verified: analyze clean, widget test passes, web build succeeds
+~ Completed
+
+---
+
+## Task 3: Home Page UI — Cover, Avatar, Name & Social Icons
+- [✅] Cover photo placeholder on top (`assets/cover_placeholder.png`, 200px) — stylized landscape art
+- [✅] Circular avatar (person-silhouette placeholder) overlaps the cover's bottom edge (profile style)
+- [✅] Column 1 (left): avatar + Name "N1SK", centered in column
+- [✅] Row 2 (right): Facebook, X, GitHub icons, aligned with the name (bottom-aligned)
+- [✅] No background panels behind column/rows — one uniform solid screen background (#0A0E14), no gradient bands
+- [✅] Verified: analyze clean, widget test passes, web build succeeds
+~ Completed
+
+---
+
+## Task 2: Know N1SK — Flutter Web Project Foundation
+- [✅] Created Flutter web project (Dart package `know`, package id `com.nisk.know`)
+- [✅] Site identity: "Know N1SK" everywhere (title, manifest, pubspec description)
+- [✅] Home page — blank screen, dark background with a whisper of blue (#0E1117 → #05070B)
+- [✅] Dark theme + dark loading background (no white flash)
+- [✅] Verified: analyze clean, widget test passes, `flutter build web` succeeds
+~ Completed
+
+---
+
+## Task 1: Workspace Foundation
+- [✅] Created `Completed.txt`
+- [✅] Created `instruction.md`
+- [✅] Wrote the core self-updating instruction rule
+- [✅] Defined the Completed.txt workflow
+~ Completed
