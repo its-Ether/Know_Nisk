@@ -8,6 +8,17 @@ The list of works achieved so far in the development.
 
 ---
 
+## Task 14: Home UI — Dark Green Date + Views Counter Beside Column 1
+- [x] "Updated on: <date>" text color changed white70 → **dark green** (`#2E7D32`)
+- [x] Views counter ([eye] 0 views) moved out of the profile block below the bio
+- [x] Column 1 (avatar, name, username) wrapped into its own **row 2**: column 1 + **32px gap** + views counter, vertically centered — the counter sits in the middle of the column, beside it
+- [x] Social handles row (row 1) untouched — still bottom-aligned with the name on the right
+- [x] Applied in the shared `ProfileView` — Home + admin editor match
+- [x] Verified: analyze clean, 12/12 widget tests pass
+- Pending N1SK: approval
+
+---
+
 ## Task 13: Font Tweak — Name to Sekuya, Username Smaller, Bio Bigger
 - [x] Profile name font changed **Anton → Sekuya** (designed by SEKUYA). Sekuya is NOT in google_fonts' bundled font list — even `GoogleFonts.getFont('Sekuya')` throws "No font family by name" — so the font is bundled locally: `assets/fonts/Sekuya-Regular.ttf` (OFL-licensed, downloaded from fonts.gstatic.com), registered in pubspec.yaml as the `Sekuya` family, and the name renders via `TextStyle(fontFamily: 'Sekuya')`. Loads instantly with the app — no runtime fetch
 - [x] Username (**Courier Prime**) shrunk 15 → 13px

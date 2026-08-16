@@ -168,76 +168,108 @@ class ProfileView extends StatelessWidget {
                     // Keeps the social icons aligned with the bottom of column 1.
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // Column 1: avatar, name and username, centered.
-                      Column(
+                      // Row 2: column 1 (avatar, name, username) plus the
+                      // views counter — 32px gap, vertically centered so the
+                      // eye + count sits in the middle of the column.
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          GestureDetector(
-                            onTap: onAvatarTap,
-                            child: CircleAvatar(
-                              radius: _avatarRadius,
-                              backgroundColor: Colors.white10,
-                              backgroundImage: avatarBytes != null
-                                  ? MemoryImage(avatarBytes!)
-                                  : avatarUrl.isEmpty
-                                      ? const AssetImage(
-                                          'assets/avatar_placeholder.png',
-                                        )
-                                      : NetworkImage(avatarUrl),
-                              // A failed load keeps the placeholder fallback.
-                              onBackgroundImageError:
-                                  avatarBytes != null || avatarUrl.isNotEmpty
-                                      ? (_, _) {}
-                                      : null,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          if (editingName && nameController != null)
-                            SizedBox(
-                              width: 220,
-                              child: TextField(
-                                controller: nameController,
-                                autofocus: true,
-                                textAlign: TextAlign.center,
-                                cursorColor: Colors.white70,
-                                style: const TextStyle(
-                                  fontFamily: 'Sekuya',
-                                  fontSize: 28,
-                                  color: Colors.white,
+                          // Column 1: avatar, name and username, centered.
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: onAvatarTap,
+                                child: CircleAvatar(
+                                  radius: _avatarRadius,
+                                  backgroundColor: Colors.white10,
+                                  backgroundImage: avatarBytes != null
+                                      ? MemoryImage(avatarBytes!)
+                                      : avatarUrl.isEmpty
+                                          ? const AssetImage(
+                                              'assets/avatar_placeholder.png',
+                                            )
+                                          : NetworkImage(avatarUrl),
+                                  // A failed load keeps the placeholder fallback.
+                                  onBackgroundImageError:
+                                      avatarBytes != null ||
+                                              avatarUrl.isNotEmpty
+                                          ? (_, _) {}
+                                          : null,
                                 ),
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                  hintText: 'Name',
-                                  hintStyle: const TextStyle(
-                                    fontFamily: 'Sekuya',
-                                    fontSize: 28,
-                                    color: Colors.white24,
+                              ),
+                              const SizedBox(height: 12),
+                              if (editingName && nameController != null)
+                                SizedBox(
+                                  width: 220,
+                                  child: TextField(
+                                    controller: nameController,
+                                    autofocus: true,
+                                    textAlign: TextAlign.center,
+                                    cursorColor: Colors.white70,
+                                    style: const TextStyle(
+                                      fontFamily: 'Sekuya',
+                                      fontSize: 28,
+                                      color: Colors.white,
+                                    ),
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                      hintText: 'Name',
+                                      hintStyle: const TextStyle(
+                                        fontFamily: 'Sekuya',
+                                        fontSize: 28,
+                                        color: Colors.white24,
+                                      ),
+                                    ),
+                                    onTapOutside: (_) =>
+                                        onNameEditDone?.call(),
+                                  ),
+                                )
+                              else
+                                GestureDetector(
+                                  onTap: onNameTap,
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(
+                                      fontFamily: 'Sekuya',
+                                      fontSize: 28,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
-                                onTapOutside: (_) => onNameEditDone?.call(),
-                              ),
-                            )
-                          else
-                            GestureDetector(
-                              onTap: onNameTap,
-                              child: Text(
-                                name,
-                                style: const TextStyle(
-                                  fontFamily: 'Sekuya',
-                                  fontSize: 28,
-                                  color: Colors.white,
+                              const SizedBox(height: 4),
+                              Text(
+                                'Nisk.Niship',
+                                style: GoogleFonts.courierPrime(
+                                  fontSize: 13,
+                                  color: Colors.blue,
                                 ),
                               ),
-                            ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Nisk.Niship',
-                            style: GoogleFonts.courierPrime(
-                              fontSize: 13,
-                              color: Colors.blue,
-                            ),
+                            ],
+                          ),
+                          const SizedBox(width: 32),
+                          // Views counter — moved up from below the bio to
+                          // sit centered beside column 1.
+                          const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.visibility,
+                                size: 18,
+                                color: Colors.white70,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                '0 views',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -336,19 +368,10 @@ class ProfileView extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   updatedOn,
-                  style: const TextStyle(fontSize: 15, color: Colors.white70),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.visibility, size: 18, color: Colors.white70),
-                    SizedBox(width: 6),
-                    Text(
-                      '0 views',
-                      style: TextStyle(fontSize: 15, color: Colors.white70),
-                    ),
-                  ],
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF2E7D32), // dark green — N1SK
+                  ),
                 ),
               ],
             ),
