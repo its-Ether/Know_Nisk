@@ -394,7 +394,7 @@ class ProfileView extends StatelessWidget {
                     maxLines: null,
                     cursorColor: Colors.white70,
                     style: GoogleFonts.comfortaa(
-                      fontSize: 15,
+                      fontSize: 14,
                       height: 1.4,
                       color: Colors.white70,
                     ),
@@ -404,7 +404,7 @@ class ProfileView extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                       hintText: 'Write a bio…',
                       hintStyle: GoogleFonts.comfortaa(
-                        fontSize: 15,
+                        fontSize: 14,
                         color: Colors.white24,
                       ),
                     ),
@@ -523,8 +523,12 @@ class _ExpandableBioState extends State<_ExpandableBio> {
 
   @override
   Widget build(BuildContext context) {
+    // 14px, not 15: Comfortaa's letterforms are wider and taller than the
+    // default (Roboto) the post text uses, so at the same 15px it read
+    // bigger than post content. 14px matches Roboto@15 in x-height and
+    // cap height (measured from the fonts' OS/2 + glyph bounds).
     final style = GoogleFonts.comfortaa(
-      fontSize: 15,
+      fontSize: 14,
       height: 1.4,
       color: Colors.white70,
     );

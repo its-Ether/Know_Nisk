@@ -158,7 +158,9 @@ Views counter (row 2):
     section 10).
 
 Bio:
-  - Comfortaa font, 15px, regular weight, white.
+  - Comfortaa font, 14px, regular weight, white (14px so it reads the same
+    size as the 15px post text — Comfortaa's wide letterforms make 15px look
+    bigger).
   - Long bios clamp at 5 lines with "…" on the Home page; tapping expands
     the bio fully, tapping again collapses it. If the bio fits in 5 lines
     it never clamps and taps do nothing.
@@ -447,7 +449,8 @@ compactly ("1.2K", in the small pill beside the name).
   - Alignment language: "centered"/"level with the name" means vertically
     aligned with the profile name, not the middle of the block.
   - Fonts: name = Sekuya (bundled, 28px), username = Courier Prime 13px
-    blue, bio = Comfortaa 15px regular. Set once in the shared profile
+    blue, bio = Comfortaa 14px regular (14px so it reads the same size as
+    post text). Set once in the shared profile
     widget so Home and the editor always match.
   - The avatar overlap is done with real layout (a stack whose padding
     pulls the avatar up) — painting-only tricks left a phantom gap and
