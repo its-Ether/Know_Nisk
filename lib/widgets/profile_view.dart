@@ -73,7 +73,7 @@ class ProfileView extends StatelessWidget {
   /// the post cards inert.
   final void Function(Post post)? onPostTap;
 
-  static const double _coverHeight = 200;
+  static const double _coverHeight = 160;
   static const double _avatarRadius = 56;
 
   /// Below this padded header width the social icons drop to their own
