@@ -74,7 +74,8 @@ When a visitor opens the site they see:
   - A compact pill beside the profile name: an eye icon + the live view
     count (e.g. "1.2K", no "views" label) — this counts how many times
     the site has been opened.
-  - A short bio (Comfortaa font). If the bio is long it is clamped to 5
+  - A short bio (default font, same style as post text). If the bio is
+    long it is clamped to 5
     lines with "…" and the visitor can tap it to expand/collapse.
   - "Updated on: <date>" in dark green (the date the profile was last
     published by N1SK).
@@ -158,9 +159,9 @@ Views counter (row 2):
     section 10).
 
 Bio:
-  - Comfortaa font, 14px, regular weight, white (14px so it reads the same
-    size as the 15px post text — Comfortaa's wide letterforms make 15px look
-    bigger).
+  - Default font, 15px, regular weight, white70 — the EXACT same face and
+    size as the post text on the feed (it reads as one voice with the
+    posts).
   - Long bios clamp at 5 lines with "…" on the Home page; tapping expands
     the bio fully, tapping again collapses it. If the bio fits in 5 lines
     it never clamps and taps do nothing.
@@ -449,8 +450,8 @@ compactly ("1.2K", in the small pill beside the name).
   - Alignment language: "centered"/"level with the name" means vertically
     aligned with the profile name, not the middle of the block.
   - Fonts: name = Sekuya (bundled, 28px), username = Courier Prime 13px
-    blue, bio = Comfortaa 14px regular (14px so it reads the same size as
-    post text). Set once in the shared profile
+    blue, bio = default font 15px (exactly the post-text style — same face,
+    size, height and color). Set once in the shared profile
     widget so Home and the editor always match.
   - The avatar overlap is done with real layout (a stack whose padding
     pulls the avatar up) — painting-only tricks left a phantom gap and
@@ -574,7 +575,7 @@ Firebase access:
 The project started 2026-08-16 as a fresh Flutter web personal site after
 an earlier futuristic profile site was emptied. It was built task by task:
 the X-style Home layout (cover, overlapping avatar, name in the bundled
-Sekuya font, blue username, Comfortaa bio, dark-green updated-on date, live
+Sekuya font, blue username, bio in the post font, dark-green updated-on date, live
 views counter, responsive header), Firebase + hosting connection, admin
 email/password sign-in, the signed-in-only editor that is a pixel-exact
 replica of Home with tap-to-edit and Publish, social link popups, a full
