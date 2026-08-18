@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../browser_storage.dart';
 import '../posts_service.dart';
 import '../site_content_service.dart';
 import '../widgets/post_detail_view.dart';
@@ -14,8 +15,43 @@ import '../widgets/profile_view.dart';
 /// site content and posts from Firestore. Until content exists, the
 /// approved placeholder art + text are shown. Content is edited on
 /// `/admin-editor` and published live.
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    _maybeCountSiteView();
+  }
+
+  /// Counts one site view, but at most once per browser per 24 hours — the
+  /// header counter would otherwise inflate on every refresh. All failures
+  /// are swallowed: no Firestore in widget tests, and an offline viewer
+  /// should still see the page.
+  void _maybeCountSiteView() {
+    try {
+      const key = 'know_site_viewed_at';
+      final last = localStorageGet(key);
+      if (last != null) {
+        final seen = DateTime.tryParse(last);
+        if (seen != null &&
+            DateTime.now().difference(seen).inHours < 24) {
+          return;
+        }
+      }
+      localStorageSet(key, DateTime.now().toIso8601String());
+      unawaited(
+        SiteContentService.instance.incrementSiteView().catchError(
+              (Object _) {},
+            ),
+      );
+    } catch (_) {}
+  }
 
   /// Opens the full post popup. Each open counts as a view on the post;
   /// failures are ignored so a broken counter never breaks the page (there

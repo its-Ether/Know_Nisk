@@ -38,6 +38,13 @@ class _PostComposerPageState extends State<PostComposerPage> {
     ...?widget.existing?.images,
   ];
 
+  /// Optional banner image for article-length posts — one slot, separate
+  /// from the four attachment images. `_cover` is a newly picked one (bytes
+  /// plus extension); `_existingCoverUrl` is what's already published on the
+  /// post being edited.
+  ({Uint8List bytes, String ext})? _cover;
+  String _existingCoverUrl = '';
+
   Uint8List? _videoBytes;
   String? _videoName;
   String _existingVideoUrl = '';
@@ -50,6 +57,7 @@ class _PostComposerPageState extends State<PostComposerPage> {
     super.initState();
     _existingVideoUrl = widget.existing?.videoUrl ?? '';
     _linkUrl = widget.existing?.linkUrl ?? '';
+    _existingCoverUrl = widget.existing?.coverUrl ?? '';
   }
 
   @override
@@ -66,6 +74,8 @@ class _PostComposerPageState extends State<PostComposerPage> {
       (_textController.text.trim().isNotEmpty ||
           _existingImages.isNotEmpty ||
           _newImages.isNotEmpty ||
+          _cover != null ||
+          _existingCoverUrl.isNotEmpty ||
           _videoBytes != null ||
           _existingVideoUrl.isNotEmpty ||
           _linkUrl.isNotEmpty);
@@ -108,6 +118,20 @@ class _PostComposerPageState extends State<PostComposerPage> {
     final prepared = prepareImageForUpload(bytes, maxWidth: 1200);
     if (!mounted) return;
     setState(() => _newImages.add((bytes: prepared.bytes, ext: prepared.ext)));
+  }
+
+  /// Picks the optional banner image for an article-length post. One slot,
+  /// wider than the attachment images so it reads as a cover.
+  Future<void> _addCover() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    final prepared = prepareImageForUpload(bytes, maxWidth: 1600);
+    if (!mounted) return;
+    setState(() {
+      _cover = (bytes: prepared.bytes, ext: prepared.ext);
+      _existingCoverUrl = '';
+    });
   }
 
   Future<void> _addVideo() async {
@@ -174,6 +198,16 @@ class _PostComposerPageState extends State<PostComposerPage> {
         );
       }
 
+      var coverUrl = _existingCoverUrl;
+      final cover = _cover;
+      if (cover != null) {
+        coverUrl = await service.uploadFile(
+          bytes: cover.bytes,
+          name: 'cover_${DateTime.now().millisecondsSinceEpoch}.${cover.ext}',
+          contentType: cover.ext == 'png' ? 'image/png' : 'image/jpeg',
+        );
+      }
+
       final images = [..._existingImages, ...uploadedImages];
       final text = _textController.text.trim();
       final linkUrl = _linkUrl.trim();
@@ -187,6 +221,7 @@ class _PostComposerPageState extends State<PostComposerPage> {
           images: images,
           videoUrl: videoUrl,
           linkUrl: linkUrl,
+          coverUrl: coverUrl,
         );
       } else {
         postId = existing.id;
@@ -198,6 +233,7 @@ class _PostComposerPageState extends State<PostComposerPage> {
             images: images,
             videoUrl: videoUrl,
             linkUrl: linkUrl,
+            coverUrl: coverUrl,
             views: existing.views,
             createdAt: existing.createdAt,
           ),
@@ -301,42 +337,115 @@ class _PostComposerPageState extends State<PostComposerPage> {
     final hasVideo = _videoBytes != null || _existingVideoUrl.isNotEmpty;
     if (_existingImages.isEmpty &&
         _newImages.isEmpty &&
+        _cover == null &&
+        _existingCoverUrl.isEmpty &&
         !hasVideo &&
         _linkUrl.isEmpty) {
       return const SizedBox.shrink();
     }
     return Padding(
       padding: const EdgeInsets.only(top: 12),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final url in _existingImages)
-            _thumbnail(
-              image: Image.network(url, fit: BoxFit.cover),
-              onRemove: () => setState(() => _existingImages.remove(url)),
+          if (_cover != null || _existingCoverUrl.isNotEmpty) ...[
+            // Wide banner preview — labelled so it reads as a cover, not an
+            // attachment. Tapping the remove button clears it entirely.
+            Container(
+              height: 140,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white24),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (_cover != null)
+                    Image.memory(_cover!.bytes, fit: BoxFit.cover)
+                  else
+                    Image.network(_existingCoverUrl, fit: BoxFit.cover),
+                  Positioned(
+                    top: 8,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Cover',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: GestureDetector(
+                      onTap: () => setState(() {
+                        _cover = null;
+                        _existingCoverUrl = '';
+                      }),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.black87,
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(3),
+                        child: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          for (var i = 0; i < _newImages.length; i++)
-            _thumbnail(
-              image: Image.memory(_newImages[i].bytes, fit: BoxFit.cover),
-              onRemove: () => setState(() => _newImages.removeAt(i)),
-            ),
-          if (hasVideo)
-            _attachmentChip(
-              icon: Icons.videocam_outlined,
-              label: _videoName ?? 'Video',
-              onRemove: () => setState(() {
-                _videoBytes = null;
-                _videoName = null;
-                _existingVideoUrl = '';
-              }),
-            ),
-          if (_linkUrl.isNotEmpty)
-            _attachmentChip(
-              icon: Icons.link,
-              label: _linkUrl,
-              onRemove: () => setState(() => _linkUrl = ''),
-            ),
+            const SizedBox(height: 12),
+          ],
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final url in _existingImages)
+                _thumbnail(
+                  image: Image.network(url, fit: BoxFit.cover),
+                  onRemove: () => setState(() => _existingImages.remove(url)),
+                ),
+              for (var i = 0; i < _newImages.length; i++)
+                _thumbnail(
+                  image: Image.memory(_newImages[i].bytes, fit: BoxFit.cover),
+                  onRemove: () => setState(() => _newImages.removeAt(i)),
+                ),
+              if (hasVideo)
+                _attachmentChip(
+                  icon: Icons.videocam_outlined,
+                  label: _videoName ?? 'Video',
+                  onRemove: () => setState(() {
+                    _videoBytes = null;
+                    _videoName = null;
+                    _existingVideoUrl = '';
+                  }),
+                ),
+              if (_linkUrl.isNotEmpty)
+                _attachmentChip(
+                  icon: Icons.link,
+                  label: _linkUrl,
+                  onRemove: () => setState(() => _linkUrl = ''),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -451,6 +560,12 @@ class _PostComposerPageState extends State<PostComposerPage> {
               const SizedBox(height: 12),
               Row(
                 children: [
+                  _addButton(
+                    label: 'Cover',
+                    icon: Icons.image_outlined,
+                    onPressed: _addCover,
+                  ),
+                  const SizedBox(width: 8),
                   _addButton(
                     label: 'Image',
                     icon: Icons.image_outlined,

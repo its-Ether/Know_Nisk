@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../posts_service.dart';
 import 'post_card.dart';
 
-/// The tabs + post feed under the profile block: a tab row of `[All]` plus
-/// one tab per folder, and below it the posts of the selected tab, newest
-/// first. Rendered by the shared ProfileView, so Home and the admin editor
-/// show exactly the same feed.
+/// The tabs + post feed under the profile block: an `Updates` tab plus one
+/// tab per folder, and below it the posts of the selected tab, newest first.
+/// Rendered by the shared ProfileView, so Home and the admin editor show
+/// exactly the same feed.
 class PostsSection extends StatefulWidget {
   const PostsSection({
     super.key,
@@ -27,7 +27,7 @@ class PostsSection extends StatefulWidget {
 }
 
 class _PostsSectionState extends State<PostsSection> {
-  String _selected = allTabLabel;
+  String _selected = updatesTabLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -37,20 +37,20 @@ class _PostsSectionState extends State<PostsSection> {
         final folders = PostsState.instance.folders;
         // If the selected folder no longer exists (its last post deleted),
         // fall back to the catch-all tab without touching the stored value.
-        final selected = folders.contains(_selected) ? _selected : allTabLabel;
+        final selected = folders.contains(_selected) ? _selected : updatesTabLabel;
         final visible = [
           for (final post in posts)
-            if (selected == allTabLabel || post.folder == selected) post,
+            if (selected == updatesTabLabel || post.folder == selected) post,
         ];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Tab row — [All] first, then one tab per folder.
+            // Tab row — Updates first, then one tab per folder.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  for (final folder in [allTabLabel, ...folders])
+                  for (final folder in [updatesTabLabel, ...folders])
                     Expanded(
                       child: _FolderTab(
                         label: folder,
@@ -77,6 +77,9 @@ class _PostsSectionState extends State<PostsSection> {
                 post: visible[i],
                 name: widget.name,
                 avatarUrl: widget.avatarUrl,
+                // Folder chips only belong on the mixed Updates feed — inside
+                // a folder tab the folder is obvious from the tab itself.
+                showFolderChip: selected == updatesTabLabel,
                 onTap: widget.onPostTap == null
                     ? null
                     : () => widget.onPostTap!(visible[i]),

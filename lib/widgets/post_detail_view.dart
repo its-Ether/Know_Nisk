@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../format_utils.dart';
 import '../posts_service.dart';
 import '../share_utils.dart';
+import 'linkified_text.dart';
 import 'post_media.dart';
 
 /// The full post — complete text and every attachment — plus the view count
@@ -26,6 +28,12 @@ class PostDetailView extends StatelessWidget {
 
   String _formatDate(DateTime date) =>
       '${_months[date.month - 1]} ${date.day}, ${date.year}';
+
+  bool get _wasEdited =>
+      post.updatedAt != null &&
+      (post.createdAt == null ||
+          post.updatedAt!.difference(post.createdAt!) >=
+              const Duration(minutes: 1));
 
   @override
   Widget build(BuildContext context) {
@@ -58,14 +66,31 @@ class PostDetailView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      post.createdAt == null
-                          ? ''
-                          : _formatDate(post.createdAt!),
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                      ),
+                    // The absolute publish date here (the feed shows a
+                    // relative time); "· updated" marks an edited post.
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          post.createdAt == null
+                              ? ''
+                              : _formatDate(post.createdAt!),
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (_wasEdited)
+                          const Text(
+                            '· updated',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -73,8 +98,31 @@ class PostDetailView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Text(
-            post.text,
+          if (post.coverUrl.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  post.coverUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (_, _, _) => Container(
+                    color: Colors.white10,
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.white24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          LinkifiedText(
+            text: post.text,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
@@ -101,7 +149,7 @@ class PostDetailView extends StatelessWidget {
               ),
               const SizedBox(width: 5),
               Text(
-                '${post.views} views',
+                '${formatCount(post.views)} views',
                 style: const TextStyle(color: Colors.white54, fontSize: 13),
               ),
               const Spacer(),

@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../format_utils.dart';
 import '../posts_service.dart';
 import '../site_content_service.dart';
 import 'posts_section.dart';
@@ -206,18 +207,26 @@ class ProfileView extends StatelessWidget {
           ],
         ),
         const SizedBox(width: 32),
-        const Padding(
-          padding: EdgeInsets.only(bottom: _nameAlignLift),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.visibility, size: 18, color: Colors.white70),
-              SizedBox(width: 6),
-              Text(
-                '0 views',
-                style: TextStyle(fontSize: 15, color: Colors.white70),
-              ),
-            ],
+        // The live site views counter — fed by the stats stream in main();
+        // until the first count arrives it reads 0.
+        Padding(
+          padding: const EdgeInsets.only(bottom: _nameAlignLift),
+          child: ValueListenableBuilder<int>(
+            valueListenable: SiteContentState.instance.siteViews,
+            builder: (context, views, _) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.visibility, size: 18, color: Colors.white70),
+                const SizedBox(width: 6),
+                Text(
+                  '${formatCount(views)} views',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

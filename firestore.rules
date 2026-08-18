@@ -19,5 +19,17 @@ service cloud.firestore {
       allow update: if request.auth != null ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']);
     }
+
+    // The site-wide views counter (`stats/site`). Everyone may read it;
+    // anyone may create or bump just the views field (the header counter
+    // works without signing in), and only signed-in admins can do anything
+    // else. Kept separate from admin/site so publishing never resets it.
+    match /stats/site {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['views']);
+      allow update: if request.auth != null ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']);
+      allow delete: if request.auth != null;
+    }
   }
 }

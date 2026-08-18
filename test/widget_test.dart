@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -18,10 +22,18 @@ void main() {
   setUp(() {
     // Tests can't fetch fonts over HTTP; resolve Google Fonts to fallbacks.
     GoogleFonts.config.allowRuntimeFetching = false;
+    // Serve a real 1x1 PNG for every network image: the test binding's
+    // default HTTP client answers with 400, and an image that outlives its
+    // widget (the feed images under the fullscreen gallery route) reports
+    // its late load error as a test exception even with an errorBuilder.
+    // (Set before the first network image load, so NetworkImage's shared
+    // HTTP client is built from these overrides.)
+    HttpOverrides.global = _FakeImageHttpOverrides();
     // Start each test logged out (AuthState is a shared singleton).
     AuthState.instance.signedIn.value = false;
     // Start each test without published site content or posts.
     SiteContentState.instance.content.value = null;
+    SiteContentState.instance.siteViews.value = 0;
     PostsState.instance.posts.value = const [];
     // The app's GoRouter is a process-wide singleton — a test that
     // navigated (e.g. to /post/:id) would otherwise leak into the next one
@@ -37,8 +49,8 @@ void main() {
     expect(find.text('Nisk.Niship'), findsOneWidget);
     expect(find.byIcon(Icons.visibility), findsOneWidget);
     expect(find.text('0 views'), findsOneWidget);
-    // With no posts yet, the only tab is the catch-all [All].
-    expect(find.text('[All]'), findsOneWidget);
+    // With no posts yet, the only tab is the catch-all Updates.
+    expect(find.text('Updates'), findsOneWidget);
     expect(find.text('No posts yet'), findsOneWidget);
   });
 
@@ -82,21 +94,25 @@ void main() {
     await tester.pumpWidget(const KnowN1SKApp());
     await tester.pumpAndSettle();
 
-    // [All] first, then one tab per folder; both posts on the catch-all.
-    expect(find.text('[All]'), findsOneWidget);
-    expect(find.text('Music'), findsOneWidget);
-    expect(find.text('Tech'), findsOneWidget);
+    // Updates first, then one tab per folder. On the mixed Updates feed the
+    // cards also show their folder chip, so each folder name appears twice
+    // (the tab plus the chip on its post).
+    expect(find.text('Updates'), findsOneWidget);
+    expect(find.text('Music'), findsNWidgets(2));
+    expect(find.text('Tech'), findsNWidgets(2));
     expect(find.text('Music post'), findsOneWidget);
     expect(find.text('Tech post'), findsOneWidget);
 
-    // A folder tab shows only its own posts.
-    await tester.tap(find.text('Music'));
+    // A folder tab shows only its own posts — and the chips disappear,
+    // because the folder is obvious from the tab itself.
+    await tester.tap(find.text('Music').first);
     await tester.pumpAndSettle();
     expect(find.text('Music post'), findsOneWidget);
     expect(find.text('Tech post'), findsNothing);
+    expect(find.text('Music'), findsOneWidget);
 
-    // Back to [All] — everything again.
-    await tester.tap(find.text('[All]'));
+    // Back to Updates — everything again.
+    await tester.tap(find.text('Updates'));
     await tester.pumpAndSettle();
     expect(find.text('Tech post'), findsOneWidget);
   });
@@ -246,7 +262,7 @@ void main() {
     expect(find.byType(HomePage), findsNothing);
     expect(find.text('N1SK'), findsOneWidget);
     expect(find.text('Nisk.Niship'), findsOneWidget);
-    expect(find.text('[All]'), findsOneWidget);
+    expect(find.text('Updates'), findsOneWidget);
     // ...with no form chrome and no Publish button until something changes.
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Publish'), findsNothing);
@@ -382,7 +398,7 @@ void main() {
     expect(find.text('Nisk.Niship'), findsOneWidget);
     expect(find.text('0 views'), findsOneWidget);
     expect(find.byIcon(FontAwesomeIcons.github), findsOneWidget);
-    expect(find.text('[All]'), findsOneWidget);
+    expect(find.text('Updates'), findsOneWidget);
   });
 
   testWidgets('the editor has a floating pen that opens the composer', (
@@ -448,4 +464,262 @@ void main() {
     );
     expect(publish.onPressed, isNotNull);
   });
+
+  testWidgets('fresh posts show a New chip and a relative time', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    PostsState.instance.posts.value = [
+      Post(
+        id: 'p1',
+        folder: 'Music',
+        text: 'Fresh post',
+        views: 0,
+        createdAt: now.subtract(const Duration(hours: 2)),
+      ),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('New'), findsOneWidget);
+    expect(find.text('2h ago'), findsOneWidget);
+
+    // An older post gets neither — and shows a day-based relative time.
+    PostsState.instance.posts.value = [
+      Post(
+        id: 'p2',
+        folder: 'Music',
+        text: 'Old post',
+        views: 0,
+        createdAt: now.subtract(const Duration(days: 3)),
+      ),
+    ];
+    await tester.pumpAndSettle();
+    expect(find.text('New'), findsNothing);
+    expect(find.text('3d ago'), findsOneWidget);
+  });
+
+  testWidgets('edited posts show a "· updated" hint next to the date', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    PostsState.instance.posts.value = [
+      Post(
+        id: 'p1',
+        folder: 'Music',
+        text: 'Edited post',
+        views: 0,
+        createdAt: now.subtract(const Duration(days: 5)),
+        updatedAt: now.subtract(const Duration(hours: 1)),
+      ),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+    expect(find.text('· updated'), findsOneWidget);
+  });
+
+  testWidgets('long posts show a read-time hint in the footer; short ones do not', (
+    tester,
+  ) async {
+    final longText = List.filled(700, 'word').join(' ');
+    PostsState.instance.posts.value = [
+      Post(id: 'p1', folder: 'Music', text: longText, views: 0),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('~4 min read'), findsOneWidget);
+    expect(find.byIcon(Icons.menu_book_outlined), findsOneWidget);
+
+    // A one-liner is under a minute of reading — no hint at all.
+    PostsState.instance.posts.value = const [
+      Post(id: 'p2', folder: 'Music', text: 'Short.', views: 0),
+    ];
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.menu_book_outlined), findsNothing);
+  });
+
+  testWidgets('counts compact to the 1.2K style', (tester) async {
+    PostsState.instance.posts.value = const [
+      Post(id: 'p1', folder: 'Music', text: 'Popular post', views: 1234),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+    expect(find.text('1.2K views'), findsOneWidget);
+  });
+
+  testWidgets('the header views counter shows the live formatted count', (
+    tester,
+  ) async {
+    SiteContentState.instance.siteViews.value = 2500;
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+    expect(find.text('2.5K views'), findsOneWidget);
+  });
+
+  testWidgets('tapping a post image opens the fullscreen gallery', (
+    tester,
+  ) async {
+    PostsState.instance.posts.value = [
+      Post(
+        id: 'p1',
+        folder: 'Music',
+        text: 'Gallery post',
+        views: 0,
+        images: const [
+          'https://example.com/a.jpg',
+          'https://example.com/b.jpg',
+        ],
+      ),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byType(ClipRRect).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(ClipRRect).first);
+    await tester.pumpAndSettle();
+
+    // The fullscreen viewer with the "1/2" position indicator.
+    expect(find.byType(PageView), findsOneWidget);
+    expect(find.text('1/2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a post with a cover renders the banner above the text', (
+    tester,
+  ) async {
+    PostsState.instance.posts.value = [
+      Post(
+        id: 'p1',
+        folder: 'Music',
+        text: 'Article post',
+        views: 0,
+        coverUrl: 'https://example.com/cover.jpg',
+      ),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    // The first AspectRatio on the card is the 16:9 cover banner.
+    final aspect = tester.widget<AspectRatio>(find.byType(AspectRatio).first);
+    expect(aspect.aspectRatio, 16 / 9);
+  });
+
+  testWidgets('bare links in post text render as blue links without breaking', (
+    tester,
+  ) async {
+    PostsState.instance.posts.value = const [
+      Post(
+        id: 'p1',
+        folder: 'Music',
+        text: 'Check https://example.com/page now',
+        views: 0,
+      ),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('https://example.com/page'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+/// A valid 1x1 transparent PNG served for every network image, so
+/// [NetworkImage] decodes successfully and never surfaces a load exception.
+final Uint8List _transparentPng = Uint8List.fromList(const <int>[
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+  0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+]);
+
+/// [HttpOverrides] whose client answers every request with a 1x1 PNG, so
+/// [NetworkImage] loads succeed instead of hitting the test binding's
+/// always-400 client.
+class _FakeImageHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) => _FakeImageHttpClient();
+}
+
+/// The [NetworkImage] test hook only calls `getUrl`, so a client that answers
+/// every request with an image is all that's needed; anything else would be
+/// an unexpected code path and fails loudly.
+class _FakeImageHttpClient implements HttpClient {
+  @override
+  bool autoUncompress = false;
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async => _FakeImageHttpClientRequest();
+
+  @override
+  Future<HttpClientRequest> openUrl(String method, Uri url) async =>
+      _FakeImageHttpClientRequest();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnimplementedError(
+      'Unhandled HttpClient member: ${invocation.memberName}',
+    );
+  }
+}
+
+class _FakeImageHttpClientRequest implements HttpClientRequest {
+  @override
+  final HttpHeaders headers = _NoopHttpHeaders();
+
+  @override
+  Future<HttpClientResponse> close() async => _FakeImageHttpClientResponse();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnimplementedError(
+      'Unhandled HttpClientRequest member: ${invocation.memberName}',
+    );
+  }
+}
+
+class _FakeImageHttpClientResponse extends Stream<List<int>>
+    implements HttpClientResponse {
+  @override
+  int get statusCode => HttpStatus.ok;
+
+  @override
+  int get contentLength => _transparentPng.length;
+
+  @override
+  HttpClientResponseCompressionState get compressionState =>
+      HttpClientResponseCompressionState.notCompressed;
+
+  @override
+  HttpHeaders get headers => _NoopHttpHeaders();
+
+  @override
+  StreamSubscription<List<int>> listen(
+    void Function(List<int> event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    return Stream<List<int>>.fromIterable(<List<int>>[_transparentPng]).listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnimplementedError(
+      'Unhandled HttpClientResponse member: ${invocation.memberName}',
+    );
+  }
+}
+
+class _NoopHttpHeaders implements HttpHeaders {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }

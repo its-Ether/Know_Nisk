@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
+import 'post_gallery.dart';
+
 /// The attachment block of a post — an inline video, the images (one large
 /// or a two-column grid) and a link card. Shared by the feed card and the
 /// full-post view so a post's attachments always render identically.
@@ -26,7 +28,7 @@ class PostAttachments extends StatelessWidget {
           PostVideoPlayer(url: videoUrl),
           const SizedBox(height: 10),
         ],
-        ..._imageWidgets(),
+        ..._imageWidgets(context),
         if (linkUrl.isNotEmpty) ...[
           if (videoUrl.isNotEmpty || images.isNotEmpty)
             const SizedBox(height: 10),
@@ -36,21 +38,14 @@ class PostAttachments extends StatelessWidget {
     );
   }
 
-  List<Widget> _imageWidgets() {
+  List<Widget> _imageWidgets(BuildContext context) {
     if (images.isEmpty) return const [];
     if (images.length == 1) {
       return [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: AspectRatio(
-            aspectRatio: 16 / 10,
-            child: Image.network(
-              images.first,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              errorBuilder: (_, _, _) => const _BrokenImage(),
-            ),
-          ),
+        _TappableImage(
+          url: images.first,
+          aspectRatio: 16 / 10,
+          onTap: () => showPostGallery(context, images: images),
         ),
       ];
     }
@@ -60,10 +55,28 @@ class PostAttachments extends StatelessWidget {
       widgets.add(
         Row(
           children: [
-            Expanded(child: _SquareImage(url: images[i])),
+            Expanded(
+              child: _TappableImage(
+                url: images[i],
+                onTap: () => showPostGallery(
+                  context,
+                  images: images,
+                  initialIndex: i,
+                ),
+              ),
+            ),
             if (hasSecond) ...[
               const SizedBox(width: 8),
-              Expanded(child: _SquareImage(url: images[i + 1])),
+              Expanded(
+                child: _TappableImage(
+                  url: images[i + 1],
+                  onTap: () => showPostGallery(
+                    context,
+                    images: images,
+                    initialIndex: i + 1,
+                  ),
+                ),
+              ),
             ],
           ],
         ),
@@ -74,21 +87,37 @@ class PostAttachments extends StatelessWidget {
   }
 }
 
-class _SquareImage extends StatelessWidget {
-  const _SquareImage({required this.url});
+/// One image in a post's attachment grid — rendered like before, but tapping
+/// it opens the fullscreen swipe gallery at that image.
+class _TappableImage extends StatelessWidget {
+  const _TappableImage({
+    required this.url,
+    required this.onTap,
+    this.aspectRatio = 1,
+  });
 
   final String url;
+  final VoidCallback onTap;
+  final double aspectRatio;
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          url,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => const _BrokenImage(),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AspectRatio(
+          aspectRatio: aspectRatio,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              url,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (_, _, _) => const _BrokenImage(),
+            ),
+          ),
         ),
       ),
     );

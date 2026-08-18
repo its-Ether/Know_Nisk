@@ -67,6 +67,10 @@ class SiteContentState {
   static final SiteContentState instance = SiteContentState._();
 
   final ValueNotifier<SiteContent?> content = ValueNotifier<SiteContent?>(null);
+
+  /// Total site views, fed by the `stats/site` stream subscribed in `main()`.
+  /// The header views counter on Home and the editor reads this live.
+  final ValueNotifier<int> siteViews = ValueNotifier<int>(0);
 }
 
 /// Reads and publishes the site content document (`admin/site` in Firestore,
@@ -79,12 +83,33 @@ class SiteContentService {
   DocumentReference<Map<String, dynamic>> get _siteDoc =>
       FirebaseFirestore.instance.collection('admin').doc('site');
 
+  DocumentReference<Map<String, dynamic>> get _siteStatsDoc =>
+      FirebaseFirestore.instance.collection('stats').doc('site');
+
   /// Live stream of the site content; emits null while the document is missing.
   Stream<SiteContent?> watch() {
     return _siteDoc.snapshots().map((snapshot) {
       final data = snapshot.data();
       return data == null ? null : SiteContent.fromData(data);
     });
+  }
+
+  /// Live stream of the total site views (0 while the stats doc is missing).
+  Stream<int> watchSiteViews() {
+    return _siteStatsDoc.snapshots().map(
+          (snapshot) =>
+              ((snapshot.data()?['views'] as num?) ?? 0).toInt(),
+        );
+  }
+
+  /// Counts one more view of the site. Lives in its own `stats/site` doc so
+  /// publishing the site content can never reset it; the rules let anyone
+  /// increment just this field (like a post's view counter).
+  Future<void> incrementSiteView() async {
+    await _siteStatsDoc.set(
+      {'views': FieldValue.increment(1)},
+      SetOptions(merge: true),
+    );
   }
 
   /// Uploads an image to Storage and returns its public download URL.

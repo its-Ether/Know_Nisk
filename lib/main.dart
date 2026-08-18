@@ -36,6 +36,11 @@ Future<void> main() async {
     (posts) => PostsState.instance.posts.value = posts,
     onError: (Object _) {},
   );
+  // The site views counter — the header counter ticks up as visitors arrive.
+  SiteContentService.instance.watchSiteViews().listen(
+    (views) => SiteContentState.instance.siteViews.value = views,
+    onError: (Object _) {},
+  );
   runApp(const KnowN1SKApp());
 }
 

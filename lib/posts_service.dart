@@ -3,7 +3,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 /// The label of the catch-all tab — every post, whatever its folder.
-const String allTabLabel = '[All]';
+const String updatesTabLabel = 'Updates';
 
 /// A published post — one item in the Home feed, filed under a folder (the
 /// tabs on the Home page).
@@ -15,8 +15,10 @@ class Post {
     this.images = const [],
     this.videoUrl = '',
     this.linkUrl = '',
+    this.coverUrl = '',
     this.views = 0,
     this.createdAt,
+    this.updatedAt,
   });
 
   final String id;
@@ -28,14 +30,21 @@ class Post {
   final String videoUrl;
   final String linkUrl;
 
+  /// Optional banner image for article-length posts (separate from [images]).
+  final String coverUrl;
+
   /// How many times the post has been opened (tapped).
   final int views;
 
   /// When the post was published (server timestamp).
   final DateTime? createdAt;
 
+  /// When the post was last edited (server timestamp); null = never edited.
+  final DateTime? updatedAt;
+
   factory Post.fromData(String id, Map<String, dynamic> data) {
     final created = data['createdAt'];
+    final updated = data['updatedAt'];
     return Post(
       id: id,
       folder: (data['folder'] as String?) ?? '',
@@ -45,8 +54,10 @@ class Post {
           .toList(),
       videoUrl: (data['videoUrl'] as String?) ?? '',
       linkUrl: (data['linkUrl'] as String?) ?? '',
+      coverUrl: (data['coverUrl'] as String?) ?? '',
       views: (data['views'] as num?)?.toInt() ?? 0,
       createdAt: created is Timestamp ? created.toDate() : null,
+      updatedAt: updated is Timestamp ? updated.toDate() : null,
     );
   }
 
@@ -56,6 +67,7 @@ class Post {
         'images': images,
         'videoUrl': videoUrl,
         'linkUrl': linkUrl,
+        'coverUrl': coverUrl,
         'views': views,
       };
 }
@@ -106,6 +118,7 @@ class PostsService {
     List<String> images = const [],
     String videoUrl = '',
     String linkUrl = '',
+    String coverUrl = '',
   }) async {
     final ref = await _posts.add({
       'folder': folder,
@@ -113,20 +126,24 @@ class PostsService {
       'images': images,
       'videoUrl': videoUrl,
       'linkUrl': linkUrl,
+      'coverUrl': coverUrl,
       'views': 0,
       'createdAt': FieldValue.serverTimestamp(),
+      // No updatedAt on creation — a brand-new post was never edited.
     });
     return ref.id;
   }
 
   /// Overwrites a post in place, keeping its original publish time and view
-  /// count, so an edit doesn't reorder the feed or reset the stats.
+  /// count, so an edit doesn't reorder the feed or reset the stats. Marks
+  /// the post as edited with a fresh `updatedAt` server timestamp.
   Future<void> updatePost(Post post) async {
     await _posts.doc(post.id).set({
       ...post.toData(),
       'createdAt': post.createdAt != null
           ? Timestamp.fromDate(post.createdAt!)
           : FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
