@@ -502,15 +502,21 @@ Firebase access:
     4de8d15 ("Task 16 tweaks: cover only in full post view, Share label
     in the post footer"), with Task 16 itself at 99fe2b6.
   - Firestore + Storage rules are live and verified.
-  - The Firebase Hosting deployment has NOT been done yet — the site at
-    know-n1sk.web.app has never been published. The FIRST real deploy
-    still needs N1SK's go-ahead.
+  - **The site is LIVE.** First Firebase Hosting deploy done 2026-08-18:
+    `flutter build web && firebase deploy --only hosting` published to
+    https://know-n1sk.web.app (verified live: `/` and the `/admin` SPA
+    deep link both answer HTTP 200). The build's SPA rewrite makes every
+    client-side route work, so shared `/post/<id>` links load the page
+    directly.
   - The database currently holds test/leftover content only: the profile
     document exists with name "nisk", two diagnostic cover/avatar images,
-    an empty bio, no social links, and no real posts.
-  - Open items: delete the diagnostic test account (section 8), decide on
-    the optional hardening (section 8), and eventually do the first
-    hosting deploy.
+    an empty bio, no social links, and no real posts. The live site shows
+    this profile exactly — to make it "real", sign in at /admin and
+    publish the real name/bio/photo, then posts from the editor (a simple
+    publish updates the live site instantly, no redeploy needed).
+  - Open items: delete the diagnostic test account (section 8) and decide
+    on the optional hardening (section 8, incl. hosting security headers
+    now that hosting is live).
   - The site has been verified with 29/29 passing tests, a clean static
     analysis, and a successful web build after every task.
 
@@ -532,5 +538,5 @@ tab, folder/New/updated chips, relative timestamps, read-time hints,
 fullscreen image gallery, number compaction, inline link detection,
 article covers shown only in the full post view, and a live site views
 counter). Firestore rules, Storage rules and the Storage CORS fix are all
-live; hosting is configured but the first deploy is still pending N1SK's
-go-ahead.
+live, and the first hosting deploy went out 2026-08-18 — the site now
+runs at https://know-n1sk.web.app.
