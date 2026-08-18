@@ -60,6 +60,10 @@ Frameworks & versions:
 
 When a visitor opens the site they see:
 
+  - The browser tab icon (favicon) shows the same image as the profile
+    avatar — the placeholder silhouette until N1SK publishes a real
+    profile picture, then the picture itself (the site repoints the
+    favicon at the avatar URL every time the profile updates).
   - A cover photo at the very top (a wide banner image).
   - A circular profile avatar that overlaps the bottom edge of the cover.
   - The profile name "N1SK" (Sekuya font), and below it the username
@@ -507,7 +511,15 @@ Firebase access:
     https://know-n1sk.web.app (verified live: `/` and the `/admin` SPA
     deep link both answer HTTP 200). The build's SPA rewrite makes every
     client-side route work, so shared `/post/<id>` links load the page
-    directly.
+    directly. Redeployed 2026-08-18 with the favicon-sync feature (see
+    section 2).
+  - **Domain note (2026-08-18):** N1SK asked for "nisk.niship.web.app".
+    That URL cannot exist — Firebase Hosting subdomains are fixed to the
+    project ID and project IDs allow only lowercase letters, numbers and
+    hyphens (no dots), so the closest possible would have been a new
+    project at nisk-niship.web.app. After the trade-offs were explained
+    N1SK chose to keep the current project, so the URL stays
+    https://know-n1sk.web.app (no migration; admin account unchanged).
   - The database currently holds test/leftover content only: the profile
     document exists with name "nisk", two diagnostic cover/avatar images,
     an empty bio, no social links, and no real posts. The live site shows
