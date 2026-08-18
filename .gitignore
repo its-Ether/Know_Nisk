@@ -36,6 +36,9 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Firebase CLI local cache (deploy bookkeeping, not project files)
+.firebase/
+
 # Symbolication related
 app.*.symbols
 
