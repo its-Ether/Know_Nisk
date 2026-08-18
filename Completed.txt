@@ -8,6 +8,20 @@ The list of works achieved so far in the development.
 
 ---
 
+## Task 15: Posts System — Folder Tabs, X-Style Posts, Composer, Bio Clamp
+- [x] **Tabs are folder names**: `[All]` first, then one tab per published folder (tabs derive from posts — a post published to a brand-new folder creates that tab with its first post); with no posts, Home shows only `[All]` + "No posts yet"
+- [x] **Data layer**: `Post` model + Firebase-free `PostsState`/`PostsService` singletons (pattern-matched to `SiteContent`); `posts` Firestore collection, `posts/` Storage folder; Firestore rules = public read, admin create/update/delete, anyone may increment just the `views` field; Storage rules = public read, admin write
+- [x] **X-style post cards on Home**: admin avatar + name + date, text clamped to **4 lines ending with "…"**, attachments below (up to 4 images in a grid / inline video player / link card), footer with [eye] + views count + share — **no likes**; the full post never renders on Home
+- [x] **Tapping a post** opens the full-post popup (each open counts a view — rules let unauthenticated visitors increment it); **share** shares/copies the `/post/<id>` deep link (SPA rewrite already in `firebase.json`)
+- [x] **Admin editor floating pen**: blue circle with a white pen icon, bottom-right with ~16px padding (never touches the edge); tap opens the full-page composer
+- [x] **Composer** (full-page dark popup, create + edit modes): text field (short text or long article), image upload (up to 4, downscaled), video upload with inline playback (`video_player`), link upload (link card on the post), folder dropdown with **"Create new folder…"** (trimmed, non-empty, case-insensitively unique); white Publish/Save pill with spinner; success SnackBar with "View" → `/post/<id>`
+- [x] **Post management in the editor**: tapping a post there opens Edit / Delete (red confirm) / Copy link instead of the viewer; removing an attachment drops it from the doc (orphaned Storage file noted as future cleanup)
+- [x] **Bio clamp**: a bio longer than 5 lines clamps to 5 with "…" on Home; tapping expands, tapping again collapses (only when it actually exceeds 5 lines); in the editor a tap still enters edit mode
+- [x] Verified: analyze clean, **21/21 widget tests pass** (new: tabs filter feed, post clamp, popup opens, `/post/:id` page, share no-op, bio expand/collapse, editor pen opens composer, composer creates a folder + enables Publish; 2 test-infra bugs found & fixed: below-fold tap misses and a leaked static GoRouter navigation state that made later tests render the `/post/:id` spinner forever), `flutter build web` succeeds
+- Pending N1SK: approval
+
+---
+
 ## Task 14: Home UI — Dark Green Date + Views Counter, Alignment & Responsiveness
 - [✅] "Updated on: <date>" text color changed white70 → **dark green** (`#2E7D32`)
 - [✅] Views counter ([eye] 0 views) moved out of the profile block below the bio

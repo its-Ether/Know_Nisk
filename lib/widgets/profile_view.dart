@@ -5,7 +5,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../posts_service.dart';
 import '../site_content_service.dart';
+import 'posts_section.dart';
 
 /// The Home page's profile block, shared verbatim by the Home page and the
 /// admin editor — one source of layout, so the editor is always an exact
@@ -34,6 +36,7 @@ class ProfileView extends StatelessWidget {
     this.avatarBytes,
     this.publishButton,
     this.onSocialTap,
+    this.onPostTap,
   });
 
   final SiteContent? content;
@@ -64,6 +67,11 @@ class ProfileView extends StatelessWidget {
   /// where the icons instead open their published links in a new tab.
   final void Function(String social)? onSocialTap;
 
+  /// What a tap on a post in the feed does — the Home page opens the
+  /// full-post popup, the admin editor opens its manage dialog. Null keeps
+  /// the post cards inert.
+  final void Function(Post post)? onPostTap;
+
   static const double _coverHeight = 200;
   static const double _avatarRadius = 56;
 
@@ -80,16 +88,6 @@ class ProfileView extends StatelessWidget {
       'Aspiring developer and creator building my presence online, '
       'one project at a time. Exploring new technologies, design, '
       'and things that feel good to use. More coming soon.';
-
-  static const List<String> _tabs = ['tab1', 'tab2', 'tab3', 'tab4'];
-
-  /// Placeholder icons for the tabs — swapped for real ones later.
-  static const List<IconData> _tabIcons = [
-    Icons.article_outlined,
-    Icons.photo_outlined,
-    Icons.play_circle_outline,
-    Icons.star_outline,
-  ];
 
   static const List<String> _months = [
     'January',
@@ -377,16 +375,12 @@ class ProfileView extends StatelessWidget {
                     onTapOutside: (_) => onBioEditDone?.call(),
                   )
                 else
-                  GestureDetector(
-                    onTap: onBioTap,
-                    child: Text(
-                      bio,
-                      style: GoogleFonts.comfortaa(
-                        fontSize: 15,
-                        height: 1.4,
-                        color: Colors.white70,
-                      ),
-                    ),
+                  _ExpandableBio(
+                    bio: bio,
+                    // On Home there is no edit hook, so a long bio becomes
+                    // tappable to expand; in the editor the tap edits.
+                    toggleable: onBioTap == null,
+                    onEditTap: onBioTap,
                   ),
                 const SizedBox(height: 12),
                 Text(
@@ -400,23 +394,12 @@ class ProfileView extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: Colors.white12),
-          // Tabs.
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                for (var i = 0; i < _tabs.length; i++)
-                  Expanded(
-                    child: _TabLabel(
-                      label: _tabs[i],
-                      icon: _tabIcons[i],
-                      selected: i == 0,
-                    ),
-                  ),
-              ],
-            ),
+          // Folder tabs + post feed — [All] plus one tab per folder.
+          PostsSection(
+            name: name,
+            avatarUrl: avatarUrl,
+            onPostTap: onPostTap,
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -475,51 +458,72 @@ class _SocialIcon extends StatelessWidget {
   }
 }
 
-class _TabLabel extends StatelessWidget {
-  const _TabLabel({
-    required this.label,
-    required this.icon,
-    required this.selected,
+/// The profile bio. On the public Home page a bio longer than 5 lines is
+/// clamped to 5 lines with an ellipsis and tapping it expands/collapses the
+/// full text; shorter bios render plain. In the editor (which passes
+/// [onEditTap]) the clamp still applies visually, but a tap enters edit
+/// mode exactly as before.
+class _ExpandableBio extends StatefulWidget {
+  const _ExpandableBio({
+    required this.bio,
+    this.toggleable = false,
+    this.onEditTap,
   });
 
-  final String label;
-  final IconData icon;
-  final bool selected;
+  final String bio;
+
+  /// Home mode: a long bio can be expanded/collapsed by tapping it.
+  final bool toggleable;
+
+  /// Editor mode: what a tap does instead of expanding.
+  final VoidCallback? onEditTap;
+
+  @override
+  State<_ExpandableBio> createState() => _ExpandableBioState();
+}
+
+class _ExpandableBioState extends State<_ExpandableBio> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Scales the label down (never up) if it can't fit, so the tab
-          // row never overflows on very narrow screens.
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 18, color: Colors.blue),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                    color: selected ? Colors.white : Colors.white54,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            height: 3,
-            color: selected ? Colors.blueGrey.shade300 : Colors.transparent,
-          ),
-        ],
-      ),
+    final style = GoogleFonts.comfortaa(
+      fontSize: 15,
+      height: 1.4,
+      color: Colors.white70,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Measure with the same style and width the Text will use, capped
+        // at 5 lines — a bio that fits stays plain, one that doesn't clamps.
+        final painter = TextPainter(
+          text: TextSpan(text: widget.bio, style: style),
+          maxLines: 5,
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: constraints.maxWidth);
+        final expandable = painter.didExceedMaxLines;
+        final maxLines = expandable && !_expanded ? 5 : null;
+        final hasAction = widget.onEditTap != null ||
+            (widget.toggleable && expandable);
+        final text = Text(
+          widget.bio,
+          style: style,
+          maxLines: maxLines,
+          overflow: maxLines == 5 ? TextOverflow.ellipsis : TextOverflow.visible,
+        );
+        if (!hasAction) return text;
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            if (widget.toggleable && expandable) {
+              setState(() => _expanded = !_expanded);
+            } else {
+              widget.onEditTap?.call();
+            }
+          },
+          child: text,
+        );
+      },
     );
   }
 }

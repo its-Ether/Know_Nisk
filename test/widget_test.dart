@@ -10,6 +10,8 @@ import 'package:know/main.dart';
 import 'package:know/pages/admin_editor_page.dart';
 import 'package:know/pages/admin_page.dart';
 import 'package:know/pages/home_page.dart';
+import 'package:know/pages/post_detail_page.dart';
+import 'package:know/posts_service.dart';
 import 'package:know/site_content_service.dart';
 
 void main() {
@@ -18,8 +20,13 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
     // Start each test logged out (AuthState is a shared singleton).
     AuthState.instance.signedIn.value = false;
-    // Start each test without published site content.
+    // Start each test without published site content or posts.
     SiteContentState.instance.content.value = null;
+    PostsState.instance.posts.value = const [];
+    // The app's GoRouter is a process-wide singleton — a test that
+    // navigated (e.g. to /post/:id) would otherwise leak into the next one
+    // and re-render that page (and its loading spinner) forever.
+    KnowN1SKApp.router.go('/');
   });
 
   testWidgets('Know N1SK renders the Home page', (tester) async {
@@ -30,10 +37,9 @@ void main() {
     expect(find.text('Nisk.Niship'), findsOneWidget);
     expect(find.byIcon(Icons.visibility), findsOneWidget);
     expect(find.text('0 views'), findsOneWidget);
-    expect(find.text('tab1'), findsOneWidget);
-    expect(find.text('tab4'), findsOneWidget);
-    expect(find.byIcon(Icons.article_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.star_outline), findsOneWidget);
+    // With no posts yet, the only tab is the catch-all [All].
+    expect(find.text('[All]'), findsOneWidget);
+    expect(find.text('No posts yet'), findsOneWidget);
   });
 
   testWidgets('bio sits directly under the username — no phantom gap', (
@@ -68,25 +74,120 @@ void main() {
     expect(viewsCenter.dx - eyeCenter.dx, lessThan(80));
   });
 
-  testWidgets('tab icons are blue', (tester) async {
+  testWidgets('folder tabs filter the post feed', (tester) async {
+    PostsState.instance.posts.value = const [
+      Post(id: 'p1', folder: 'Music', text: 'Music post', views: 0),
+      Post(id: 'p2', folder: 'Tech', text: 'Tech post', views: 0),
+    ];
     await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
 
-    expect(
-      tester.widget<Icon>(find.byIcon(Icons.article_outlined)).color,
-      Colors.blue,
+    // [All] first, then one tab per folder; both posts on the catch-all.
+    expect(find.text('[All]'), findsOneWidget);
+    expect(find.text('Music'), findsOneWidget);
+    expect(find.text('Tech'), findsOneWidget);
+    expect(find.text('Music post'), findsOneWidget);
+    expect(find.text('Tech post'), findsOneWidget);
+
+    // A folder tab shows only its own posts.
+    await tester.tap(find.text('Music'));
+    await tester.pumpAndSettle();
+    expect(find.text('Music post'), findsOneWidget);
+    expect(find.text('Tech post'), findsNothing);
+
+    // Back to [All] — everything again.
+    await tester.tap(find.text('[All]'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tech post'), findsOneWidget);
+  });
+
+  testWidgets('a long post is clamped to a few lines on the feed', (
+    tester,
+  ) async {
+    final longText = List.filled(80, 'sentence').join(' ');
+    PostsState.instance.posts.value = [
+      Post(id: 'p1', folder: 'Music', text: longText, views: 0),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    final cardText = tester.widget<Text>(find.text(longText));
+    expect(cardText.maxLines, 4);
+    expect(cardText.overflow, TextOverflow.ellipsis);
+  });
+
+  testWidgets('tapping a post opens the full post popup', (tester) async {
+    PostsState.instance.posts.value = const [
+      Post(id: 'p1', folder: 'Music', text: 'A short post.', views: 3),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    // The post sits below the 600px test viewport — bring it into view first.
+    await tester.ensureVisible(find.text('A short post.'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('A short post.'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.close), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('/post/:id opens the shareable full post page', (tester) async {
+    PostsState.instance.posts.value = const [
+      Post(id: 'p1', folder: 'Music', text: 'Deep link post', views: 2),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .context
+        .go('/post/p1');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PostDetailPage), findsOneWidget);
+    expect(find.text('Deep link post'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('share tap is a safe no-op in widget tests', (tester) async {
+    PostsState.instance.posts.value = const [
+      Post(id: 'p1', folder: 'Music', text: 'Shared post.', views: 1),
+    ];
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    // No share backend exists in tests — the tap must simply not blow up.
+    await tester.ensureVisible(find.byIcon(Icons.share_outlined).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.share_outlined).first);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a long bio clamps to 5 lines and expands on tap', (
+    tester,
+  ) async {
+    final longBio = List.filled(100, 'word').join(' ');
+    SiteContentState.instance.content.value = SiteContent(
+      coverUrl: '',
+      avatarUrl: '',
+      name: 'nisk',
+      bio: longBio,
     );
-    expect(
-      tester.widget<Icon>(find.byIcon(Icons.photo_outlined)).color,
-      Colors.blue,
-    );
-    expect(
-      tester.widget<Icon>(find.byIcon(Icons.play_circle_outline)).color,
-      Colors.blue,
-    );
-    expect(
-      tester.widget<Icon>(find.byIcon(Icons.star_outline)).color,
-      Colors.blue,
-    );
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    Text bioText() => tester.widget<Text>(find.text(longBio));
+    // Longer than 5 lines: clamped with an ellipsis…
+    expect(bioText().maxLines, 5);
+    // …tap expands to the full text…
+    await tester.tap(find.text(longBio));
+    await tester.pumpAndSettle();
+    expect(bioText().maxLines, isNull);
+    // …and tapping again collapses it.
+    await tester.tap(find.text(longBio));
+    await tester.pumpAndSettle();
+    expect(bioText().maxLines, 5);
   });
 
   testWidgets('screen background is pure black', (tester) async {
@@ -145,7 +246,7 @@ void main() {
     expect(find.byType(HomePage), findsNothing);
     expect(find.text('N1SK'), findsOneWidget);
     expect(find.text('Nisk.Niship'), findsOneWidget);
-    expect(find.text('tab1'), findsOneWidget);
+    expect(find.text('[All]'), findsOneWidget);
     // ...with no form chrome and no Publish button until something changes.
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Publish'), findsNothing);
@@ -281,6 +382,70 @@ void main() {
     expect(find.text('Nisk.Niship'), findsOneWidget);
     expect(find.text('0 views'), findsOneWidget);
     expect(find.byIcon(FontAwesomeIcons.github), findsOneWidget);
-    expect(find.text('tab4'), findsOneWidget);
+    expect(find.text('[All]'), findsOneWidget);
+  });
+
+  testWidgets('the editor has a floating pen that opens the composer', (
+    tester,
+  ) async {
+    AuthState.instance.signedIn.value = true;
+    await tester.pumpWidget(const KnowN1SKApp());
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .context
+        .go('/admin-editor');
+    await tester.pumpAndSettle();
+
+    // The blue circle pen sits on the editor, bottom-right.
+    final fab = find.byType(FloatingActionButton);
+    expect(fab, findsOneWidget);
+    expect(find.byIcon(Icons.edit), findsOneWidget);
+    final fabCenter = tester.getCenter(fab);
+    expect(fabCenter.dx, greaterThan(400));
+    expect(fabCenter.dy, greaterThan(400));
+
+    // Tapping it opens the full-page composer.
+    await tester.tap(fab);
+    await tester.pumpAndSettle();
+    expect(find.text('New post'), findsOneWidget);
+    expect(find.text('Write a post…'), findsOneWidget);
+  });
+
+  testWidgets('composer creates a new folder and enables Publish', (
+    tester,
+  ) async {
+    AuthState.instance.signedIn.value = true;
+    await tester.pumpWidget(const KnowN1SKApp());
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .context
+        .go('/admin-editor');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    // No folders yet — the dropdown offers "Create new folder…".
+    await tester.tap(find.byType(DropdownButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create new folder…'));
+    await tester.pumpAndSettle();
+    expect(find.text('New folder'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, 'Music');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    // The new folder is now the selected folder…
+    expect(find.text('Music'), findsOneWidget);
+
+    // …and once there is content the Publish pill is live.
+    await tester.enterText(find.byType(TextField).first, 'Hello world');
+    await tester.pumpAndSettle();
+    expect(find.text('Publish'), findsOneWidget);
+    final publish = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Publish'),
+    );
+    expect(publish.onPressed, isNotNull);
   });
 }

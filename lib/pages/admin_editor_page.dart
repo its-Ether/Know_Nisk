@@ -1,13 +1,14 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
+import '../image_utils.dart';
+import '../posts_service.dart';
 import '../site_content_service.dart';
 import '../widgets/profile_view.dart';
+import 'post_composer_page.dart';
 
 /// Admin editor — served at `/admin-editor`, reachable only while signed in
 /// (the router redirects logged-out visitors to the Home screen).
@@ -172,7 +173,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
 
       var coverUrl = current?.coverUrl ?? '';
       if (_coverBytes != null) {
-        final prepared = _prepareForUpload(_coverBytes!, maxWidth: 1200);
+        final prepared = prepareImageForUpload(_coverBytes!, maxWidth: 1200);
         coverUrl = await service.uploadImage(
           bytes: prepared.bytes,
           name:
@@ -183,7 +184,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
 
       var avatarUrl = current?.avatarUrl ?? '';
       if (_avatarBytes != null) {
-        final prepared = _prepareForUpload(_avatarBytes!, maxWidth: 512);
+        final prepared = prepareImageForUpload(_avatarBytes!, maxWidth: 512);
         avatarUrl = await service.uploadImage(
           bytes: prepared.bytes,
           name:
@@ -236,51 +237,121 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
     }
   }
 
-  /// Downscales a picked image for upload and re-encodes it — JPEG for
-  /// photos (small uploads), PNG kept for small originals with transparency.
-  ({Uint8List bytes, String ext, String contentType}) _prepareForUpload(
-    Uint8List bytes, {
-    required int maxWidth,
-  }) {
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) {
-      return (bytes: bytes, ext: 'jpg', contentType: 'image/jpeg');
-    }
-    final needsResize = decoded.width > maxWidth;
-    final image = needsResize
-        ? img.copyResize(decoded, width: maxWidth)
-        : decoded;
-    final keepPng = !needsResize && _isPng(bytes);
-    if (keepPng) {
-      return (
-        bytes: Uint8List.fromList(img.encodePng(image)),
-        ext: 'png',
-        contentType: 'image/png',
-      );
-    }
-    return (
-      bytes: Uint8List.fromList(img.encodeJpg(image, quality: 85)),
-      ext: 'jpg',
-      contentType: 'image/jpeg',
+  /// Opens the post composer for a brand-new post (the floating pen).
+  Future<void> _openComposer() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const PostComposerPage(),
+      ),
     );
   }
 
-  /// True when [bytes] start with the PNG signature (`89 50 4E 47`).
-  bool _isPng(Uint8List bytes) {
-    return bytes.length >= 8 &&
-        bytes[0] == 0x89 &&
-        bytes[1] == 0x50 &&
-        bytes[2] == 0x4E &&
-        bytes[3] == 0x47;
+  /// Post taps in the editor open the manage dialog instead of the viewer:
+  /// edit the post in the composer, delete it, or copy its share link.
+  Future<void> _managePost(Post post) async {
+    final action = await showDialog<String>(
+      context: context,
+      builder: (_) => _PostManageDialog(post: post),
+    );
+    if (action == null || !mounted) return;
+    switch (action) {
+      case 'edit':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => PostComposerPage(existing: post),
+          ),
+        );
+      case 'delete':
+        await _confirmDelete(post);
+      case 'copy':
+        final url = Uri.base.replace(path: '/post/${post.id}').toString();
+        try {
+          await Clipboard.setData(ClipboardData(text: url));
+        } catch (_) {}
+        if (mounted) _snack('Link copied');
+    }
+  }
+
+  Future<void> _confirmDelete(Post post) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF0D0D0D),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.white12),
+        ),
+        title: const Text(
+          'Delete post?',
+          style: TextStyle(color: Colors.white, fontSize: 17),
+        ),
+        content: const Text(
+          "This removes the post from the site. It can't be undone.",
+          style: TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await PostsService.instance.deletePost(post.id);
+      if (mounted) _snack('Post deleted');
+    } catch (e) {
+      if (mounted) _snack('Delete failed: $e', error: true);
+    }
+  }
+
+  void _snack(String message, {bool error = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: error ? const TextStyle(color: Colors.redAccent) : null,
+        ),
+        backgroundColor: const Color(0xFF111111),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final content = SiteContentState.instance.content.value;
     return Scaffold(
-      // The only extra on the page — the Publish pill rides in the social
-      // icons row and appears only while there are unsaved changes, so the
-      // clean editor is a pixel replica of Home.
+      // The only extras on the page — the Publish pill rides in the social
+      // icons row and appears only while there are unsaved changes, and the
+      // floating pen opens the post composer — so the clean editor is a
+      // pixel replica of Home.
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openComposer,
+        shape: const CircleBorder(),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        tooltip: 'New post',
+        child: const Icon(Icons.edit),
+      ),
       body: ProfileView(
         content: content,
         onCoverTap: _pickCover,
@@ -296,6 +367,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
         coverBytes: _coverBytes,
         avatarBytes: _avatarBytes,
         onSocialTap: _editSocialLink,
+        onPostTap: _managePost,
         publishButton: _dirty || _publishing
             ? _PublishButton(
                 publishing: _publishing,
@@ -303,6 +375,57 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
               )
             : null,
       ),
+    );
+  }
+}
+
+/// The small admin dialog for a published post — edit, delete or copy its
+/// share link. Shown instead of the viewer popup because the editor is the
+/// admin's workspace, not a reader's.
+class _PostManageDialog extends StatelessWidget {
+  const _PostManageDialog({required this.post});
+
+  final Post post;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF0D0D0D),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Colors.white12),
+      ),
+      title: const Text(
+        'Post',
+        style: TextStyle(color: Colors.white, fontSize: 17),
+      ),
+      content: SizedBox(
+        width: 320,
+        child: Text(
+          post.text,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'copy'),
+          child: const Text('Copy link', style: TextStyle(color: Colors.white54)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'delete'),
+          child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, 'edit'),
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+          ),
+          child: const Text('Edit', style: TextStyle(fontWeight: FontWeight.w600)),
+        ),
+      ],
     );
   }
 }
