@@ -476,6 +476,10 @@ Build + deploy to Firebase Hosting:
   - Deploying security rules only: firebase deploy --only firestore,storage
   - IMPORTANT: content changes (publishing from the editor) do NOT need a
     deploy — they update live. Only code changes need a rebuild/deploy.
+  - If the deployed site ever misbehaves in ways that don't match a fresh
+    local build (e.g. Firebase calls failing), run `flutter clean` first —
+    a stale `.dart_tool` web plugin registrant caused exactly that once
+    (see section 14).
 
 Firebase access:
   - The terminal's firebase-tools is logged in as node.awake@gmail.com,
@@ -520,6 +524,26 @@ Firebase access:
     project at nisk-niship.web.app. After the trade-offs were explained
     N1SK chose to keep the current project, so the URL stays
     https://know-n1sk.web.app (no migration; admin account unchanged).
+  - **2026-08-18 live sign-in fix (hosting deploy #3):** /admin sign-in
+    failed on the live site with "Sign-in failed:
+    dev.flutter.pigeon.firebase_auth_platform_interface.
+    firebaseauthhostapi.singinwithemailandpassword". Root cause: the
+    deployed bundle was missing the Firebase **web** plugin
+    implementations — a stale generated `web_plugin_registrant.dart`
+    (written 2026-08-16, not regenerated since) registered only
+    `firebase_core_web`. Without `FirebaseAuthWeb.registerWith()` running
+    at startup, the Firebase Auth platform interface fell back to the
+    native method-channel (pigeon) path, which doesn't exist on web —
+    hence the channel-name error string. The same staleness had silently
+    broken Firestore reads and Storage uploads on the live site. Fix:
+    `flutter clean` (wipes `.dart_tool` so the web registrant is
+    force-regenerated), `flutter pub get`, rebuild, redeploy. Verified:
+    the regenerated registrant registers the auth/firestore/storage web
+    plugins, and the live main.dart.js now contains the
+    'flutter-fire-auth' / 'flutter-fire-fst' / 'flutter-fire-gcs'
+    markers. **Gotcha for future sessions:** if live behavior ever stops
+    matching a fresh local build, check
+    `.dart_tool/flutter_build/<hash>/web_plugin_registrant.dart` first.
   - The database currently holds test/leftover content only: the profile
     document exists with name "nisk", two diagnostic cover/avatar images,
     an empty bio, no social links, and no real posts. The live site shows
@@ -551,4 +575,8 @@ fullscreen image gallery, number compaction, inline link detection,
 article covers shown only in the full post view, and a live site views
 counter). Firestore rules, Storage rules and the Storage CORS fix are all
 live, and the first hosting deploy went out 2026-08-18 — the site now
-runs at https://know-n1sk.web.app.
+runs at https://know-n1sk.web.app. A later 2026-08-18 deploy fixed a
+live /admin sign-in failure: a stale web plugin registrant had dropped
+the Firebase web implementations from the bundle, so sign-in (and
+silently Firestore/Storage) fell back to a nonexistent native channel;
+`flutter clean` + rebuild + redeploy restored the real web plugins.
