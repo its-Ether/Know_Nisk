@@ -383,8 +383,9 @@ void main() {
   });
 
   testWidgets('Home holds up on a narrow phone-width screen', (tester) async {
-    // 360x800 @1x — the narrowest common phone. The header must wrap the
-    // social icons onto their own line instead of overflowing.
+    // 360x800 @1x — a typical phone. The header stays ONE line: the social
+    // icons remain level with the views counter (beside the profile name),
+    // never dropping to their own line.
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -399,6 +400,30 @@ void main() {
     expect(find.text('0'), findsOneWidget);
     expect(find.byIcon(FontAwesomeIcons.github), findsOneWidget);
     expect(find.text('Updates'), findsOneWidget);
+    // Regression: the icons stay on the SAME line as the views counter on
+    // mobile — no vertical shift down from the bigger-screen position.
+    final githubCenter = tester.getCenter(find.byIcon(FontAwesomeIcons.github));
+    final counterCenter = tester.getCenter(find.text('0'));
+    expect((githubCenter.dy - counterCenter.dy).abs(), lessThan(10));
+  });
+
+  testWidgets('Home survives a very narrow screen (icons stack, no overflow)', (
+    tester,
+  ) async {
+    // 320x800 @1x — the narrowest common phone. One line no longer fits, so
+    // the icons fall back to their own right-aligned line — but nothing may
+    // overflow or throw.
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const KnowN1SKApp());
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('N1SK'), findsOneWidget);
+    expect(find.byIcon(FontAwesomeIcons.github), findsOneWidget);
+    expect(find.text('0'), findsOneWidget);
   });
 
   testWidgets('the editor has a floating pen that opens the composer', (

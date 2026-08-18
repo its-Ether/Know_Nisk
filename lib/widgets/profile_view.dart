@@ -78,7 +78,11 @@ class ProfileView extends StatelessWidget {
 
   /// Below this padded header width the social icons drop to their own
   /// right-aligned line instead of sharing the row with the profile block.
-  static const double _headerOneLineMinWidth = 430;
+  /// Kept low enough that every normal phone width (>= ~332px screen, which
+  /// is ~300px of padded header width) stays on ONE line — the icons stay
+  /// level with the profile name instead of shifting down; only ultra-narrow
+  /// screens fall back to the stacked layout so nothing ever overflows.
+  static const double _headerOneLineMinWidth = 300;
 
   /// Vertical lift that aligns a bottom-anchored element with the profile
   /// name — used for both the views counter and the social icons so they
@@ -327,9 +331,10 @@ class ProfileView extends StatelessWidget {
                     builder: (context, constraints) {
                       // Wide enough: one line — row 2 (profile block) on the
                       // left, row 1 (social icons) pushed to the far right,
-                      // aligned with the profile name. Too narrow for one
-                      // line: the icons drop to their own right-aligned line
-                      // so nothing ever overflows.
+                      // aligned with the profile name. This holds at every
+                      // normal phone width too, so the icons never shift
+                      // down on mobile. Only ultra-narrow widths fall back
+                      // to a stacked layout so nothing overflows.
                       if (constraints.maxWidth >= _headerOneLineMinWidth) {
                         return Row(
                           // Bottom-aligned with the same lift as the views
@@ -338,12 +343,22 @@ class ProfileView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             row2,
-                            const Spacer(),
-                            Padding(
-                              padding: EdgeInsets.only(
-                                bottom: _nameAlignLift,
+                            // The icons get all remaining width and stay
+                            // pinned to the far right. If the row gets tight
+                            // (phones), the FittedBox scales them down a
+                            // notch instead of overflowing — so the icons
+                            // never drop off the profile-name line.
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: _nameAlignLift,
+                                  ),
+                                  child: socialIcons,
+                                ),
                               ),
-                              child: socialIcons,
                             ),
                           ],
                         );
@@ -462,7 +477,7 @@ class _SocialIcon extends StatelessWidget {
       padding: const EdgeInsets.only(left: 16),
       child: Tooltip(
         message: label,
-        child: Icon(icon, size: 18, color: Colors.white70),
+                        child: Icon(icon, size: 22, color: Colors.white70),
       ),
     );
     final editable = onTap != null;

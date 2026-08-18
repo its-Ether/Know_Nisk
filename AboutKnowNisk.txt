@@ -140,9 +140,10 @@ Avatar + name column (left side):
     highlights).
 
 Social icons (right side):
-  - Facebook, X, GitHub icons sit on the FAR RIGHT of the header, aligned
-    so they sit level with the profile name (a small bottom "lift" lines
-    them up with the name, not the middle of the column and not the bio).
+  - Facebook, X, GitHub icons (22px) sit on the FAR RIGHT of the header,
+    aligned so they sit level with the profile name (a small bottom "lift"
+    lines them up with the name, not the middle of the column and not the
+    bio).
   - Tapping an icon opens its link in a new tab. Icons with no link set
     are inert. A bare domain like "github.com/nisk" gets https:// added
     automatically.
@@ -174,10 +175,13 @@ Divider and tabs:
     to fit.
 
 Responsive behavior:
-  - The header is built with a width breakpoint (~430px). On wide screens
-    the name column and the social icons share one line (icons far right).
-    Below the breakpoint the icons drop to their own right-aligned line so
-    nothing overlaps or clips.
+  - The header is built with a width breakpoint (~300px of padded header
+    width — roughly a 332px screen, so every common phone keeps the wide
+    layout). On wide screens the name column and the social icons share one
+    line (icons far right). On tight widths the icons scale down slightly
+    (FittedBox) instead of overflowing; only on ultra-narrow screens
+    (below ~300px) do the icons drop to their own right-aligned line. The
+    icons NEVER shift below the profile-name line on a normal phone.
 
 
 ============================================================

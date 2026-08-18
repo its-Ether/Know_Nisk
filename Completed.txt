@@ -8,11 +8,12 @@ The list of works achieved so far in the development.
 
 ---
 
-## Task 17: Header Micro-Tweaks — Views Counter Pill, Smaller Icons
+## Task 17: Header Micro-Tweaks — Views Counter Pill, Mobile One-Line Header
 - [x] **Views counter → compact pill**: removed the "views" label from the header counter; the eye icon + count now sit inside a small rounded container (10px horizontal / 6px vertical padding, subtle white10 fill) with a smaller eye icon (18 → 14) and count text (15 → 13px) — it reads as its own chip beside the profile name
 - [x] **Gap reduced**: the space between the profile block and the views counter tightened 32px → 18px
-- [x] **Social handle icons smaller**: Facebook / X / GitHub icons shrunk 22 → 18
-- [x] Verified: analyze clean, **29/29 widget tests pass** (counter expectations updated to the label-less count), `flutter build web` succeeds, deployed live to https://know-n1sk.web.app (release #4)
+- [x] **Social handle icons back at 22px** (the 18px shrink was reverted at N1SK's request — "resize the social handle icons to previous size")
+- [x] **Mobile fix — icons no longer drop to their own line**: the header breakpoint dropped 430px → 300px, so every normal phone width keeps the icons level with the profile name on ONE line (no more empty space on the left / icons shifted down on mobile); at truly ultra-narrow widths (< ~300px) the icons stack on a right-aligned line below, and the icon row is now wrapped in `Expanded` + `FittedBox(scaleDown)` so the icons shrink slightly instead of overflowing at tight widths
+- [x] Verified: analyze clean, **30/30 widget tests pass** (new: 360px same-line regression assert + 320px stacked-fallback test; counter expectations updated to the label-less count), `flutter build web` succeeds, deployed live to https://know-n1sk.web.app (release #5)
 
 ---
 - [✅] **`[All]` tab renamed → `Updates`**; folder chips (`post.folder`) show only on the Updates feed (hidden on folder tabs — the viewer already knows the folder there); "New" chip (blue accent, posts < 24h old) sits in the header row after the date
