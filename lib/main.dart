@@ -5,6 +5,7 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 
 import 'auth_state.dart';
+import 'favicon.dart';
 import 'firebase_options.dart';
 import 'pages/admin_editor_page.dart';
 import 'pages/admin_page.dart';
@@ -27,7 +28,11 @@ Future<void> main() async {
   // Feed the Home page + editor from Firestore; publishing in the editor
   // then shows up live (errors keep the last known content).
   SiteContentService.instance.watch().listen(
-    (content) => SiteContentState.instance.content.value = content,
+    (content) {
+      SiteContentState.instance.content.value = content;
+      // The browser tab icon follows the profile picture.
+      syncFavicon(content?.avatarUrl);
+    },
     onError: (Object _) {},
   );
   // Same for the post feed — posts appear on Home the moment they're
