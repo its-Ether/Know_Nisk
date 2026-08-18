@@ -586,7 +586,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a post with a cover renders the banner above the text', (
+  testWidgets('a post cover shows only in the full post view, not the feed', (
     tester,
   ) async {
     PostsState.instance.posts.value = [
@@ -601,7 +601,16 @@ void main() {
     await tester.pumpWidget(const KnowN1SKApp());
     await tester.pumpAndSettle();
 
-    // The first AspectRatio on the card is the 16:9 cover banner.
+    // The feed card leaves the cover out entirely (no image/video/link
+    // attachments either, so no AspectRatio at all on the card).
+    expect(find.byType(AspectRatio), findsNothing);
+
+    // The full post popup is where the 16:9 banner appears.
+    await tester.ensureVisible(find.text('Article post'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Article post'));
+    await tester.pumpAndSettle();
+
     final aspect = tester.widget<AspectRatio>(find.byType(AspectRatio).first);
     expect(aspect.aspectRatio, 16 / 9);
   });

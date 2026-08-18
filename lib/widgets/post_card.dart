@@ -9,10 +9,10 @@ import 'post_media.dart';
 /// One post in the Home feed, styled like an X post: admin avatar + name +
 /// the meta row (relative date, "· updated" when edited, a "New" chip for
 /// fresh posts and — on the Updates feed only — a chip with the post's
-/// folder), the optional article cover banner, the text clamped to a few
-/// lines ending with an ellipsis (the full text lives in the post popup),
-/// the attachments, and a left-aligned footer with views, share and read
-/// time that scrolls horizontally instead of overflowing. No likes.
+/// folder), the text clamped to a few lines ending with an ellipsis (the
+/// full text — and the article cover banner, if any — live in the post
+/// popup), the attachments, and a left-aligned footer with views, share and
+/// read time that scrolls horizontally instead of overflowing. No likes.
 class PostCard extends StatelessWidget {
   const PostCard({
     super.key,
@@ -127,34 +127,11 @@ class PostCard extends StatelessWidget {
                   ),
                 ],
               ),
-              // Optional banner image for article-length posts.
-              if (post.coverUrl.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Image.network(
-                      post.coverUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (_, _, _) => Container(
-                        color: Colors.white10,
-                        child: const Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: Colors.white24,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
               const SizedBox(height: 10),
               // The feed shows a few lines ending with "…"; the full text
-              // only appears in the post popup, just like X. Bare URLs in
-              // the text render as tappable blue links.
+              // (and the article cover banner, if the post has one) only
+              // appears in the post popup, just like X. Bare URLs in the
+              // text render as tappable blue links.
               LinkifiedText(
                 text: post.text,
                 maxLines: 4,
@@ -302,10 +279,23 @@ class _PostFooterState extends State<_PostFooter> {
                     onTap: widget.onShare,
                     child: const Padding(
                       padding: EdgeInsets.all(2),
-                      child: Icon(
-                        Icons.share_outlined,
-                        size: 18,
-                        color: Colors.white54,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.share_outlined,
+                            size: 16,
+                            color: Colors.white54,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Share',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
