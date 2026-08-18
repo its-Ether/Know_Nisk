@@ -9,15 +9,15 @@ The list of works achieved so far in the development.
 ---
 
 ## Task 14: Home UI — Dark Green Date + Views Counter, Alignment & Responsiveness
-- [x] "Updated on: <date>" text color changed white70 → **dark green** (`#2E7D32`)
-- [x] Views counter ([eye] 0 views) moved out of the profile block below the bio
-- [x] Column 1 (avatar, name, username) wrapped into its own **row 2**: column 1 + **32px gap** + views counter
-- [x] Views counter is **bottom-aligned in row 2 with a small lift** so it lines up with the profile name (and the username below it) — fixed relative to the column, so it holds at any window size
-- [x] **Social media icon row stays on the right side of the screen, aligned with the profile name** — same bottom-lift as the views counter so both sit level with the name (not bottom-hugging the bio, not centered mid-column)
-- [x] **Responsive:** below ~430px padded width the social icons drop to their own right-aligned line (LayoutBuilder breakpoint) instead of overflowing; tab labels scale down (`FittedBox`) rather than overflow; nothing mismatches on resize
-- [x] Applied in the shared `ProfileView` — Home + admin editor match
-- [x] Verified: analyze clean, **13/13 widget tests pass** (1 new: narrow phone-width screen, no overflow)
-- Pending N1SK: approval
+- [✅] "Updated on: <date>" text color changed white70 → **dark green** (`#2E7D32`)
+- [✅] Views counter ([eye] 0 views) moved out of the profile block below the bio
+- [✅] Column 1 (avatar, name, username) wrapped into its own **row 2**: column 1 + **32px gap** + views counter
+- [✅] Views counter is **bottom-aligned in row 2 with a small lift** so it lines up with the profile name (and the username below it) — fixed relative to the column, so it holds at any window size
+- [✅] **Social media icon row stays on the right side of the screen, aligned with the profile name** — same bottom-lift as the views counter so both sit level with the name (not bottom-hugging the bio, not centered mid-column)
+- [✅] **Responsive:** below ~430px padded width the social icons drop to their own right-aligned line (LayoutBuilder breakpoint) instead of overflowing; tab labels scale down (`FittedBox`) rather than overflow; nothing mismatches on resize
+- [✅] Applied in the shared `ProfileView` — Home + admin editor match
+- [✅] Verified: analyze clean, **14/14 widget tests pass** (2 new: narrow phone-width screen, no overflow; social icons on the far right, level with the name)
+~ Completed
 
 ---
 
