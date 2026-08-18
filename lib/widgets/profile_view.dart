@@ -127,7 +127,7 @@ class ProfileView extends StatelessWidget {
             : _formatDate(DateTime.now());
 
     // Row 2: column 1 (avatar, name, username) plus the views counter —
-    // 32px gap; the counter is bottom-aligned with a lift so it sits
+    // 18px gap; the counter is bottom-aligned with a lift so it sits
     // beside the profile name (the row's bottom is the username's bottom,
     // the name sits just above it). Fixed relative to the column, so the
     // alignment holds at any width.
@@ -206,26 +206,38 @@ class ProfileView extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(width: 32),
+        const SizedBox(width: 18),
         // The live site views counter — fed by the stats stream in main();
-        // until the first count arrives it reads 0.
+        // until the first count arrives it reads 0. A compact pill with no
+        // "views" label so it reads as its own chip beside the name.
         Padding(
           padding: const EdgeInsets.only(bottom: _nameAlignLift),
           child: ValueListenableBuilder<int>(
             valueListenable: SiteContentState.instance.siteViews,
-            builder: (context, views, _) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.visibility, size: 18, color: Colors.white70),
-                const SizedBox(width: 6),
-                Text(
-                  '${formatCount(views)} views',
-                  style: const TextStyle(
-                    fontSize: 15,
+            builder: (context, views, _) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.visibility,
+                    size: 14,
                     color: Colors.white70,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 5),
+                  Text(
+                    formatCount(views),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -450,7 +462,7 @@ class _SocialIcon extends StatelessWidget {
       padding: const EdgeInsets.only(left: 16),
       child: Tooltip(
         message: label,
-        child: Icon(icon, size: 22, color: Colors.white70),
+        child: Icon(icon, size: 18, color: Colors.white70),
       ),
     );
     final editable = onTap != null;

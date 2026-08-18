@@ -8,7 +8,13 @@ The list of works achieved so far in the development.
 
 ---
 
-## Task 16: Post Feed Upgrades — Chips, Timestamps, Read Time, Gallery, Live Site Views
+## Task 17: Header Micro-Tweaks — Views Counter Pill, Smaller Icons
+- [x] **Views counter → compact pill**: removed the "views" label from the header counter; the eye icon + count now sit inside a small rounded container (10px horizontal / 6px vertical padding, subtle white10 fill) with a smaller eye icon (18 → 14) and count text (15 → 13px) — it reads as its own chip beside the profile name
+- [x] **Gap reduced**: the space between the profile block and the views counter tightened 32px → 18px
+- [x] **Social handle icons smaller**: Facebook / X / GitHub icons shrunk 22 → 18
+- [x] Verified: analyze clean, **29/29 widget tests pass** (counter expectations updated to the label-less count), `flutter build web` succeeds, deployed live to https://know-n1sk.web.app (release #4)
+
+---
 - [✅] **`[All]` tab renamed → `Updates`**; folder chips (`post.folder`) show only on the Updates feed (hidden on folder tabs — the viewer already knows the folder there); "New" chip (blue accent, posts < 24h old) sits in the header row after the date
 - [✅] **Relative timestamps**: cards show "just now / 5m ago / 3h ago / 2d ago" instead of the absolute date, falling back to a short absolute date ("Aug 16") past 7 days; the full post page keeps the absolute date
 - [✅] **"· updated" hint** on edited posts: the composer now writes `updatedAt` (server timestamp) on edit, and cards show "· updated" next to the date when it differs by ≥ 1 min

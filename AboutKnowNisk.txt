@@ -71,9 +71,9 @@ When a visitor opens the site they see:
   - On the far right, three social icons: Facebook, X (Twitter), GitHub.
     Each opens the linked profile in a new browser tab; icons without a
     link do nothing.
-  - A row beside the profile name showing an eye icon and a live view
-    counter (e.g. "1.2K views") — this counts how many times the site has
-    been opened.
+  - A compact pill beside the profile name: an eye icon + the live view
+    count (e.g. "1.2K", no "views" label) — this counts how many times
+    the site has been opened.
   - A short bio (Comfortaa font). If the bio is long it is clamped to 5
     lines with "…" and the visitor can tap it to expand/collapse.
   - "Updated on: <date>" in dark green (the date the profile was last
@@ -148,10 +148,13 @@ Social icons (right side):
     automatically.
 
 Views counter (row 2):
-  - The eye icon + live count sits 32px to the right of the avatar/name
-    column, bottom-aligned with the same lift so it lines up with the
-    profile name. The count is compact-formatted (see section 9) and live:
-    it increases when visitors open the site (see section 10).
+  - A compact pill sits 18px to the right of the avatar/name column,
+    bottom-aligned with the same lift so it lines up with the profile
+    name. The pill holds a small eye icon + the live count (no "views"
+    label), on a subtle white10 fill with ~10px horizontal / 6px vertical
+    padding and a fully rounded shape. The count is compact-formatted (see
+    section 9) and live: it increases when visitors open the site (see
+    section 10).
 
 Bio:
   - Comfortaa font, 15px, regular weight, white.
@@ -415,7 +418,7 @@ opened in a browser, the app increments the stats/site.views counter — but
 only once per browser per 24 hours (the browser remembers via localStorage
 that it already counted). This prevents refreshes and reloads from
 inflating the number. The counter updates live on the page and is shown
-compactly ("1.2K views").
+compactly ("1.2K", in the small pill beside the name).
 
 
 ============================================================

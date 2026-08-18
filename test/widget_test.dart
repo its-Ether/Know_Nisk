@@ -48,7 +48,7 @@ void main() {
     expect(find.text('N1SK'), findsOneWidget);
     expect(find.text('Nisk.Niship'), findsOneWidget);
     expect(find.byIcon(Icons.visibility), findsOneWidget);
-    expect(find.text('0 views'), findsOneWidget);
+    expect(find.text('0'), findsOneWidget);
     // With no posts yet, the only tab is the catch-all Updates.
     expect(find.text('Updates'), findsOneWidget);
     expect(find.text('No posts yet'), findsOneWidget);
@@ -81,7 +81,7 @@ void main() {
     await tester.pumpWidget(const KnowN1SKApp());
 
     final eyeCenter = tester.getCenter(find.byIcon(Icons.visibility));
-    final viewsCenter = tester.getCenter(find.text('0 views'));
+    final viewsCenter = tester.getCenter(find.text('0'));
     expect(viewsCenter.dx, greaterThan(eyeCenter.dx));
     expect(viewsCenter.dx - eyeCenter.dx, lessThan(80));
   });
@@ -373,7 +373,7 @@ void main() {
     // The icons stay on the right side of the screen — right of the views
     // counter and in the right half of the 800px test surface.
     final githubCenter = tester.getCenter(find.byIcon(FontAwesomeIcons.github));
-    final viewsCenter = tester.getCenter(find.text('0 views'));
+    final viewsCenter = tester.getCenter(find.text('0'));
     expect(githubCenter.dx, greaterThan(viewsCenter.dx));
     expect(githubCenter.dx, greaterThan(400));
 
@@ -396,7 +396,7 @@ void main() {
     // Everything still renders: profile block + icons + counter.
     expect(find.text('N1SK'), findsOneWidget);
     expect(find.text('Nisk.Niship'), findsOneWidget);
-    expect(find.text('0 views'), findsOneWidget);
+    expect(find.text('0'), findsOneWidget);
     expect(find.byIcon(FontAwesomeIcons.github), findsOneWidget);
     expect(find.text('Updates'), findsOneWidget);
   });
@@ -554,7 +554,7 @@ void main() {
     SiteContentState.instance.siteViews.value = 2500;
     await tester.pumpWidget(const KnowN1SKApp());
     await tester.pumpAndSettle();
-    expect(find.text('2.5K views'), findsOneWidget);
+    expect(find.text('2.5K'), findsOneWidget);
   });
 
   testWidgets('tapping a post image opens the fullscreen gallery', (
