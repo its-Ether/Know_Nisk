@@ -1,0 +1,536 @@
+ABOUT KNOW N1SK
+============================================================
+A complete, plain-English reference to the Know N1SK website project.
+Read this file to understand the whole project without reading any code.
+
+Last updated: 2026-08-18 (all tasks 1-16 approved and completed)
+============================================================
+
+TABLE OF CONTENTS
+------------------------------------------------------------
+1.  What this project is
+2.  The site at a glance (visitor's view)
+3.  Technology stack
+4.  The Home page, top to bottom
+5.  Posts: folders, feed cards, popups, sharing
+6.  The admin side: sign-in, editor, composer
+7.  Where data lives (Firebase)
+8.  Security model — what visitors can and cannot do
+9.  Formats used on the site (numbers, dates, read time)
+10. View counters (post views and site views)
+11. Design decisions & conventions (why things are the way they are)
+12. How to run, test and deploy
+13. Git & version control
+14. Current live state and open items
+15. Project history in one paragraph
+
+
+============================================================
+1. WHAT THIS PROJECT IS
+============================================================
+
+Know N1SK is N1SK's personal website. It is a single-page-style site built
+with Flutter (Google's cross-platform UI framework) and runs ONLY on the
+web — there is no Android/iOS version. It is styled like an X/Twitter
+profile page and serves two audiences on two separate pages:
+
+  - The public Home page (/) — what any visitor sees.
+  - The admin editor (/admin-editor) — a private page where only N1SK can
+    update the site's content and publish posts. Signing in happens on the
+    /admin page.
+
+The site has no user accounts, no comments, no likes, and no "following".
+Visitors simply read N1SK's profile and posts.
+
+Package/application identifiers:
+  - App/package ID: com.nisk.know  (the Dart package is named "know")
+  - Firebase project: know-n1sk
+  - Live hosting URL: https://know-n1sk.web.app
+  - GitHub repository: nisk-niship/know-N1SK (private)
+
+Frameworks & versions:
+  - Flutter 3.29.3, Dart 3.7, Material 3
+  - go_router for navigation (URLs use clean paths like /admin, not #/admin)
+  - Firebase: Firestore (data), Storage (images/videos), Auth (admin sign-in)
+
+
+============================================================
+2. THE SITE AT A GLANCE (VISITOR'S VIEW)
+============================================================
+
+When a visitor opens the site they see:
+
+  - A cover photo at the very top (a wide banner image).
+  - A circular profile avatar that overlaps the bottom edge of the cover.
+  - The profile name "N1SK" (Sekuya font), and below it the username
+    "Nisk.Niship" (Courier Prime, blue).
+  - On the far right, three social icons: Facebook, X (Twitter), GitHub.
+    Each opens the linked profile in a new browser tab; icons without a
+    link do nothing.
+  - A row beside the profile name showing an eye icon and a live view
+    counter (e.g. "1.2K views") — this counts how many times the site has
+    been opened.
+  - A short bio (Comfortaa font). If the bio is long it is clamped to 5
+    lines with "…" and the visitor can tap it to expand/collapse.
+  - "Updated on: <date>" in dark green (the date the profile was last
+    published by N1SK).
+  - A row of tabs. The first tab is always "Updates" (every post from every
+    folder). Each published folder gets its own tab, so tabs like "Music"
+    or "Tech" filter the feed to only that folder's posts.
+  - Below the tabs, the post feed. Posts are read-only cards (see section
+    5). With no posts, the feed shows "No posts yet".
+
+The whole site sits on ONE pure-black background. The design is deliberately
+dark, minimal and restrained.
+
+
+============================================================
+3. TECHNOLOGY STACK
+============================================================
+
+  - Flutter web (Dart) — the entire site is one Flutter app compiled to web.
+  - go_router — page routing. Routes:
+        /              → Home page (public)
+        /admin         → Admin sign-in page (email + password)
+        /admin-editor  → Admin editor (only reachable when signed in)
+        /post/:id      → A shareable full-post page for one post
+    Clean paths are enabled (a "usePathUrlStrategy" call in the app's main
+    file), so /admin works instead of the default /#/admin.
+  - Firebase:
+        firebase_core        — app initialization
+        firebase_auth        — email/password sign-in for the admin
+        cloud_firestore      — all site content and posts
+        firebase_storage     — uploaded images and videos
+  - Google Fonts (runtime-fetched by the browser) for most fonts, EXCEPT
+    the profile name font "Sekuya" which is bundled inside the app as a
+    font file (Google Fonts does not carry it).
+  - Other libraries: image_picker (choosing images), file_picker (choosing
+    videos), video_player (inline video playback), share_plus (native
+    sharing with a clipboard fallback), url_launcher (opening links in new
+    tabs), font_awesome_flutter (social brand icons).
+
+Testing: the app has a suite of automated widget tests (currently 29 tests
+that all pass). The tests run WITHOUT a real Firebase connection or a real
+browser, thanks to a design choice described in section 11.
+
+
+============================================================
+4. THE HOME PAGE, TOP TO BOTTOM
+============================================================
+
+Background: one uniform pure-black background (#000000) across the whole
+page — no gradients, no panels. The page uses minimal 16px side padding.
+
+Cover photo (200px tall, full width):
+  - Sits at the very top. Pinned so the header content below overlaps it.
+  - On the public site it is read-only. Placeholder artwork shows until
+    N1SK publishes a real cover.
+
+Avatar + name column (left side):
+  - Circular profile avatar, radius 20px, overlapping the cover's bottom
+    edge (the avatar is pulled up over the cover in real layout, not just
+    painted).
+  - Profile name "N1SK" in the Sekuya font, 28px, white.
+  - Username "Nisk.Niship" below the name, Courier Prime font, 13px, BLUE
+    (blue matches the site's accent color used for tab icons and focus
+    highlights).
+
+Social icons (right side):
+  - Facebook, X, GitHub icons sit on the FAR RIGHT of the header, aligned
+    so they sit level with the profile name (a small bottom "lift" lines
+    them up with the name, not the middle of the column and not the bio).
+  - Tapping an icon opens its link in a new tab. Icons with no link set
+    are inert. A bare domain like "github.com/nisk" gets https:// added
+    automatically.
+
+Views counter (row 2):
+  - The eye icon + live count sits 32px to the right of the avatar/name
+    column, bottom-aligned with the same lift so it lines up with the
+    profile name. The count is compact-formatted (see section 9) and live:
+    it increases when visitors open the site (see section 10).
+
+Bio:
+  - Comfortaa font, 15px, regular weight, white.
+  - Long bios clamp at 5 lines with "…" on the Home page; tapping expands
+    the bio fully, tapping again collapses it. If the bio fits in 5 lines
+    it never clamps and taps do nothing.
+
+"Updated on: <date>":
+  - Shown in dark green (#2E7D32). The date is the moment N1SK last
+    published the profile from the editor. Format: "August 16, 2026".
+
+Divider and tabs:
+  - A thin divider, then the tab row. First tab: "Updates". Then one tab
+    per published folder, in the order the folders were first used.
+  - Tabs have blue icons. The active tab has an underline indicator.
+  - The tab row never overflows: on narrow screens the labels scale down
+    to fit.
+
+Responsive behavior:
+  - The header is built with a width breakpoint (~430px). On wide screens
+    the name column and the social icons share one line (icons far right).
+    Below the breakpoint the icons drop to their own right-aligned line so
+    nothing overlaps or clips.
+
+
+============================================================
+5. POSTS: FOLDERS, FEED CARDS, POPUPS, SHARING
+============================================================
+
+What a post is:
+  - Every post belongs to a FOLDER (e.g. "Music", "Tech"). Folders are
+    just names — they organize the feed and become the tabs on Home.
+  - A post can have:
+        - Text (a short update or a long article)
+        - Up to 4 images
+        - One video (plays inline, tap to play/pause)
+        - One link (shown as a tappable "link card" with the domain + URL)
+        - An optional article COVER — a wide banner image shown only when
+          the full post is opened (not on the feed card)
+        - A view count, a creation time, and (if edited) an update time
+
+The feed card (what appears on Home):
+  - Avatar + profile name + a header row:
+        - Relative time: "just now", "5m ago", "3h ago", "2d ago" (see
+          section 9 for exact rules)
+        - "· updated" if the post was edited (update time at least 1
+          minute after creation)
+        - A blue "New" chip for posts younger than 24 hours
+        - On the "Updates" feed only, a small outlined chip with the
+          post's folder name. Folder chips are hidden when viewing a
+          specific folder tab (the viewer already knows the folder).
+  - The post text is clamped to 4 lines ending with "…" on the feed.
+    Bare URLs inside the text become tappable blue links (they open in a
+    new tab). The article cover is NOT shown on the feed.
+  - Attachments render below the text: images in a grid (one image = wide
+    16:10; two or more = square grid), the inline video, and the link card.
+  - A footer row at the bottom, LEFT-aligned, containing:
+        [eye] <views>   [share icon] Share   [book icon] ~<N> min read
+    The read-time hint only appears for posts of at least a minute of
+    reading (~200 words per minute). If the footer row is wider than the
+    card it becomes horizontally scrollable with a soft fade on the right
+    edge. There is nothing on the right side of the footer, and there are
+    NO like buttons anywhere.
+
+Tapping a post:
+  - Opens a full-screen popup with the COMPLETE post: the absolute date
+    (e.g. "Aug 16, 2026" instead of the relative time), the article cover
+    banner if present, the full text with inline links, all attachments,
+    the formatted view count, and a Share button. Each time the popup
+    opens, the post's view count increases by one.
+  - Tapping an image inside a post opens the FULLSCREEN GALLERY: a pure
+    black viewer where the visitor swipes left/right between the post's
+    images, pinches to zoom (up to 4x), sees a "1/2" position counter at
+    the bottom, and closes with an X at the top.
+
+Sharing:
+  - The Share button (in the feed footer and in the full post view) uses
+    the browser's native share dialog where available; otherwise it copies
+    the post's direct link to the clipboard and shows "Link copied".
+  - The direct link is https://<site>/post/<post-id>. Opening that link
+    anywhere shows the full-post page, which also counts one view.
+
+Sorting: posts appear newest-first in the feed and within each folder tab.
+
+
+============================================================
+6. THE ADMIN SIDE: SIGN-IN, EDITOR, COMPOSER
+============================================================
+
+Sign-in (/admin):
+  - A minimal form on the pure-black background: "Admin" title, Email
+    field, Password field, white "Sign in" button (Enter also submits).
+  - There is NO sign-up page. Accounts are created by N1SK manually in
+    the Firebase console (Authentication → Users, Email/Password provider
+    must be enabled).
+  - After a successful sign-in the browser goes straight to the editor.
+    Wrong credentials show a friendly error message.
+
+The editor (/admin-editor):
+  - Signed-in access ONLY. A logged-out visitor is redirected to the Home
+    page by the app's routing. (Real protection comes from Firebase rules
+    — see section 8; the redirect is just convenience for the UI.)
+  - The editor is a PIXEL-EXACT copy of the Home page — the same shared
+    widget renders both, so they can never look different. Nothing extra,
+    no form chrome.
+  - Everything is TAP-TO-EDIT:
+        - Tap the cover or avatar → opens the image picker; the chosen
+          image is automatically downscaled (cover to 1200px, avatar to
+          512px) and uploaded.
+        - Tap the name or bio → that element swaps in place to an
+          identically-styled text field (tap elsewhere to finish).
+        - Tap a social icon → a small popup lets N1SK type the link that
+          icon should open (Facebook/X/GitHub).
+  - A white "Publish" pill appears in the social icons row ONLY when
+    something has actually changed. Tapping it uploads any new images and
+    writes the profile to Firebase, and the public Home page picks it up
+    LIVE (no redeploy needed — the site reads the data at run time). A
+    success message offers a "View" shortcut back to Home.
+  - A floating blue circle pen button (bottom-right) opens the POST
+    COMPOSER.
+
+The composer (post composer):
+  - A full-page dark form for creating or editing a post.
+  - Fields: the post text, up to 4 images, one video, one link, an
+    optional article cover image, and a folder dropdown.
+  - The folder dropdown lists existing folders plus "Create new folder…",
+    which lets N1SK invent a new folder name (trimmed, non-empty,
+    case-insensitively unique) — the first post published there creates
+    that folder's tab on Home.
+  - White "Publish" (new post) / "Save" (edit) pill with a small spinner
+    while saving; a success message offers "View" → the post's page.
+  - In the editor, tapping a post card opens Edit / Delete (with a red
+    confirm dialog) / Copy link instead of the visitor's popup.
+
+Live updates: when N1SK publishes, every open browser tab showing the site
+updates itself within moments — there is no separate "rebuild the site"
+step for content changes. (A code change, however, needs a new web build —
+see section 12.)
+
+
+============================================================
+7. WHERE DATA LIVES (FIREBASE)
+============================================================
+
+Firestore (the database):
+
+  Collection "admin", document "site" — the profile content:
+      coverUrl    (image URL or empty)
+      avatarUrl   (image URL or empty)
+      name        (e.g. "N1SK")
+      bio         (the bio text; empty/missing shows placeholder text)
+      updatedAt   (server timestamp of the last publish)
+      facebookUrl / xUrl / githubUrl  (social links; empty = not set)
+
+  Collection "posts", one document per post:
+      id         (the document ID — used in /post/<id> links)
+      folder     (the folder name)
+      text       (the post content)
+      images     (list of image URLs, up to 4)
+      videoUrl   (one video URL or empty)
+      linkUrl    (one link URL or empty)
+      coverUrl   (article cover URL or empty)
+      views      (integer, view count)
+      createdAt  (server timestamp)
+      updatedAt  (server timestamp, only set when the post is edited)
+
+  Collection "stats", document "site" — the site view counter:
+      views      (integer)
+
+Firebase Storage (files — images and videos):
+  - Folder "images/": the profile cover and avatar
+        (e.g. cover_1717000000000.jpg, avatar_1717000000000.jpg)
+  - Folder "posts/": post images, videos and covers
+        (e.g. image_<timestamp>.jpg, video_<timestamp>.mp4,
+         cover_<timestamp>.jpg)
+
+Firebase Auth:
+  - Email/password accounts only. N1SK creates the admin account(s) in
+    the Firebase console; there is no sign-up in the app.
+
+IMPORTANT hosting detail: Firebase Storage media files previously failed
+to display because the storage bucket (know-n1sk.firebasestorage.app)
+returned no CORS headers. This was fixed by setting the bucket's CORS
+policy to allow any origin. If images ever stop rendering, check the
+bucket CORS configuration first.
+
+
+============================================================
+8. SECURITY MODEL — WHAT VISITORS CAN AND CANNOT DO
+============================================================
+
+The real security boundary is the Firebase rules (server-enforced), not
+the app's UI. The rules were deployed live and verified with real HTTP
+probes on 2026-08-18. In plain terms:
+
+  - ANYONE (even logged-out) can READ all site content: the profile
+    document, every post, and every uploaded image/video.
+  - ONLY a signed-in user can WRITE (create/update/delete) content:
+    publishing the profile, creating/editing/deleting posts, uploading
+    files. The rules treat ANY signed-in account as an admin writer.
+  - Anyone may INCREMENT view counters, and only the views field — a
+    visitor can bump a post's views or the site views, but cannot change
+    the post text, delete a post, or touch anything else.
+  - There is no anonymous content editing, no bypassing via the /admin
+    pages (a tampered client could render the editor UI, but every write
+    is still denied by the server rules without real credentials).
+
+Verified behaviors (as an anonymous visitor): reading everything works;
+every kind of write is denied; incrementing only the views field works.
+
+Known items for the future (not yet done):
+  - A leftover diagnostic test account (zcode-diag-20260816@test.local)
+    still exists in Firebase Auth and — because ANY signed-in user is an
+    admin writer — is technically a live write credential. N1SK should
+    delete it in the Firebase console.
+  - Optional hardening offered and deferred: (a) pin admin writes to
+    N1SK's specific account email instead of "any signed-in user";
+    (b) restrict anonymous view increments to +1 only; (c) add security
+    headers (CSP etc.) when hosting is deployed.
+
+The repository contains no secrets: the only key-like value is the
+Firebase web API key, which is public by design for Firebase web apps.
+
+
+============================================================
+9. FORMATS USED ON THE SITE (NUMBERS, DATES, READ TIME)
+============================================================
+
+Number compaction (formatCount):
+  - Under 1,000: shown as-is (999).
+  - Thousands: one decimal below 10K, a whole number at/above 10K
+    (1,234 → "1.2K", 12,000 → "12K"; a trailing ".0" is dropped).
+  - Millions: same pattern, with M (1,500,000 → "1.5M", 2,000,000 → "2M").
+  - The single-view case reads "1 view"; otherwise "<formatted> views".
+
+Relative time (on feed cards):
+  - Under 60 seconds: "just now"
+  - Under 60 minutes: "5m ago"
+  - Under 24 hours: "3h ago"
+  - Under 7 days: "2d ago"
+  - 7+ days: a short date like "Aug 16" (year added if it is a different
+    year: "Aug 16, 2025")
+
+Absolute date (full post view): e.g. "Aug 16, 2026".
+
+Read time: number of words divided by 200 (words per minute), rounded up.
+  - Under one minute → no read-time hint at all.
+  - Otherwise shown as "~4 min read" with a book icon.
+
+
+============================================================
+10. VIEW COUNTERS (POST VIEWS AND SITE VIEWS)
+============================================================
+
+Post views: each time a visitor opens the full post (the popup on Home or
+the /post/<id> page), the post's views count increases by one. This is
+allowed for logged-out visitors by the rules (views-only increment).
+
+Site views: the eye-icon counter on the Home header. Each time the site is
+opened in a browser, the app increments the stats/site.views counter — but
+only once per browser per 24 hours (the browser remembers via localStorage
+that it already counted). This prevents refreshes and reloads from
+inflating the number. The counter updates live on the page and is shown
+compactly ("1.2K views").
+
+
+============================================================
+11. DESIGN DECISIONS & CONVENTIONS (WHY THINGS ARE THIS WAY)
+============================================================
+
+  - The site is styled like an X/Twitter profile. N1SK knows this pattern
+    and expects new elements to anchor to it.
+  - Pure black background, one uniform screen. Gradients or panels between
+    sections read as an unwanted "second background" and were removed.
+  - Dark, minimal, restrained color. Blue is used ONLY as a specified
+    accent (tab icons, username, focus, "New" chip). The updated-on date
+    is dark green (#2E7D32).
+  - No like/reaction buttons anywhere — visitors are unauthenticated and
+    there is no per-user state to anchor them.
+  - The post footer is left-aligned only (views · share · read time),
+    nothing on the right. It scrolls horizontally when full so future
+    footer features can be added without overflow.
+  - The admin editor is a pixel-exact replica of Home (shared widget).
+    N1SK explicitly requires the editor to look identical to the public
+    page — no form chrome.
+  - Alignment language: "centered"/"level with the name" means vertically
+    aligned with the profile name, not the middle of the block.
+  - Fonts: name = Sekuya (bundled, 28px), username = Courier Prime 13px
+    blue, bio = Comfortaa 15px regular. Set once in the shared profile
+    widget so Home and the editor always match.
+  - The avatar overlap is done with real layout (a stack whose padding
+    pulls the avatar up) — painting-only tricks left a phantom gap and
+    were rejected.
+  - App state is deliberately Firebase-free at render time: singleton
+    in-memory notifiers hold the data, and a separate service layer talks
+    to Firebase. This is WHY the automated tests run with no Firebase
+    connection and no browser (widget tests substitute fake data). A
+    small browser-storage helper is conditionally imported so web-only
+    code (localStorage) never runs on the test machine.
+  - Widget tests disable Google Fonts runtime fetching (no HTTP in
+    tests), and a fake HTTP layer serves a tiny real image so that
+    network images load deterministically in tests.
+
+
+============================================================
+12. HOW TO RUN, TEST AND DEPLOY
+============================================================
+
+Run locally (dev server):
+  - flutter run -d web-server --web-port 63085
+  - Serves at http://localhost:63085 (use "localhost", not 127.0.0.1 —
+    the server binds to IPv6).
+  - The dev server needs a full restart after main() level changes.
+
+Run the tests:
+  - flutter test          (29 tests, must all pass)
+  - flutter analyze       (must report no issues)
+
+Build + deploy to Firebase Hosting:
+  - flutter build web
+  - firebase deploy --only hosting
+  - Deploying security rules only: firebase deploy --only firestore,storage
+  - IMPORTANT: content changes (publishing from the editor) do NOT need a
+    deploy — they update live. Only code changes need a rebuild/deploy.
+
+Firebase access:
+  - The terminal's firebase-tools is logged in as node.awake@gmail.com,
+    tied to the know-n1sk project.
+
+
+============================================================
+13. GIT & VERSION CONTROL
+============================================================
+
+  - Repository: github.com/nisk-niship/know-N1SK (PRIVATE).
+  - Local git identity: Nisk <nisk.niship@gmail.com> (set as a local
+    override so commits link to the right GitHub account).
+  - Workflow: commit + push every meaningful change so history can
+    rebuild the site if a future change breaks it.
+  - The folder build/, .dart_tool/ and .idea/ are git-ignored, and a junk
+    0-byte file named "Icon\r" is deliberately left untracked.
+  - The Firebase web API key in the app config is public by design.
+  - Emails/mentions in the project docs are fine while the repo is
+    private; they would need a cleanup pass if the repo ever went public.
+
+
+============================================================
+14. CURRENT LIVE STATE AND OPEN ITEMS (as of 2026-08-18)
+============================================================
+
+  - All 16 tasks are approved and completed. The last push was commit
+    4de8d15 ("Task 16 tweaks: cover only in full post view, Share label
+    in the post footer"), with Task 16 itself at 99fe2b6.
+  - Firestore + Storage rules are live and verified.
+  - The Firebase Hosting deployment has NOT been done yet — the site at
+    know-n1sk.web.app has never been published. The FIRST real deploy
+    still needs N1SK's go-ahead.
+  - The database currently holds test/leftover content only: the profile
+    document exists with name "nisk", two diagnostic cover/avatar images,
+    an empty bio, no social links, and no real posts.
+  - Open items: delete the diagnostic test account (section 8), decide on
+    the optional hardening (section 8), and eventually do the first
+    hosting deploy.
+  - The site has been verified with 29/29 passing tests, a clean static
+    analysis, and a successful web build after every task.
+
+
+============================================================
+15. PROJECT HISTORY IN ONE PARAGRAPH
+============================================================
+
+The project started 2026-08-16 as a fresh Flutter web personal site after
+an earlier futuristic profile site was emptied. It was built task by task:
+the X-style Home layout (cover, overlapping avatar, name in the bundled
+Sekuya font, blue username, Comfortaa bio, dark-green updated-on date, live
+views counter, responsive header), Firebase + hosting connection, admin
+email/password sign-in, the signed-in-only editor that is a pixel-exact
+replica of Home with tap-to-edit and Publish, social link popups, a full
+posts system (folder tabs, X-style cards, composer, bio clamp, inline
+video, shareable /post/:id pages), and the post feed upgrades (Updates
+tab, folder/New/updated chips, relative timestamps, read-time hints,
+fullscreen image gallery, number compaction, inline link detection,
+article covers shown only in the full post view, and a live site views
+counter). Firestore rules, Storage rules and the Storage CORS fix are all
+live; hosting is configured but the first deploy is still pending N1SK's
+go-ahead.
