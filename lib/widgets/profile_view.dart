@@ -450,7 +450,7 @@ class _SocialIcon extends StatelessWidget {
     this.onTap,
   });
 
-  final IconData icon;
+  final FaIconData icon;
   final String label;
 
   /// The published link on the public Home page (empty = not set).
@@ -477,7 +477,7 @@ class _SocialIcon extends StatelessWidget {
       padding: const EdgeInsets.only(left: 16),
       child: Tooltip(
         message: label,
-                        child: Icon(icon, size: 22, color: Colors.white70),
+                        child: FaIcon(icon, size: 22, color: Colors.white70),
       ),
     );
     final editable = onTap != null;

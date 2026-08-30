@@ -149,7 +149,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
     });
   }
 
-  static const Map<String, IconData> _socialIcons = {
+  static const Map<String, FaIconData> _socialIcons = {
     'facebook': FontAwesomeIcons.facebookF,
     'x': FontAwesomeIcons.xTwitter,
     'github': FontAwesomeIcons.github,
@@ -480,7 +480,7 @@ class _SocialLinkDialog extends StatefulWidget {
     required this.initialLink,
   });
 
-  final IconData icon;
+  final FaIconData icon;
   final String label;
   final String initialLink;
 
@@ -511,7 +511,7 @@ class _SocialLinkDialogState extends State<_SocialLinkDialog> {
       ),
       title: Row(
         children: [
-          Icon(widget.icon, size: 22, color: Colors.white70),
+          FaIcon(widget.icon, size: 22, color: Colors.white70),
           const SizedBox(width: 10),
           Text(
             widget.label,
