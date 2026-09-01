@@ -30,9 +30,11 @@ class AdminEditorPage extends StatefulWidget {
 class _AdminEditorPageState extends State<AdminEditorPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
 
   bool _editingName = false;
   bool _editingBio = false;
+  bool _editingUsername = false;
 
   /// Newly picked images, null until the admin changes them.
   Uint8List? _coverBytes;
@@ -55,6 +57,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
   /// text actually diverges from these.
   String _syncedName = '';
   String _syncedBio = '';
+  String _syncedUsername = '';
 
   /// True while programmatically filling the controllers — don't mark dirty.
   bool _hydrating = false;
@@ -66,6 +69,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
     SiteContentState.instance.content.addListener(_onContentChanged);
     _nameController.addListener(_onTextChanged);
     _bioController.addListener(_onTextChanged);
+    _usernameController.addListener(_onTextChanged);
   }
 
   @override
@@ -73,6 +77,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
     SiteContentState.instance.content.removeListener(_onContentChanged);
     _nameController.dispose();
     _bioController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
@@ -90,9 +95,11 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
     _hydrating = true;
     _nameController.text = content.name;
     _bioController.text = content.bio;
+    _usernameController.text = content.username;
     _hydrating = false;
     _syncedName = _nameController.text;
     _syncedBio = _bioController.text;
+    _syncedUsername = _usernameController.text;
     _pendingLinks['facebook'] = content.facebookUrl;
     _pendingLinks['x'] = content.xUrl;
     _pendingLinks['github'] = content.githubUrl;
@@ -102,7 +109,8 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
     if (_hydrating) return;
     final edited =
         _nameController.text != _syncedName ||
-        _bioController.text != _syncedBio;
+        _bioController.text != _syncedBio ||
+        _usernameController.text != _syncedUsername;
     // Rebuild so the Publish pill appears as soon as something changes.
     if (edited && !_dirty) setState(() => _dirty = true);
   }
@@ -199,6 +207,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
           avatarUrl: avatarUrl,
           name: _nameController.text.trim(),
           bio: _bioController.text.trim(),
+          username: _usernameController.text.trim(),
           facebookUrl: _pendingLinks['facebook'] ?? '',
           xUrl: _pendingLinks['x'] ?? '',
           githubUrl: _pendingLinks['github'] ?? '',
@@ -212,6 +221,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
         // What was just published is now the baseline.
         _syncedName = _nameController.text;
         _syncedBio = _bioController.text;
+        _syncedUsername = _usernameController.text;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -358,12 +368,16 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
         onAvatarTap: _pickAvatar,
         onNameTap: () => setState(() => _editingName = true),
         onBioTap: () => setState(() => _editingBio = true),
+        onUsernameTap: () => setState(() => _editingUsername = true),
         onNameEditDone: () => setState(() => _editingName = false),
         onBioEditDone: () => setState(() => _editingBio = false),
+        onUsernameEditDone: () => setState(() => _editingUsername = false),
         nameController: _nameController,
         bioController: _bioController,
+        usernameController: _usernameController,
         editingName: _editingName,
         editingBio: _editingBio,
+        editingUsername: _editingUsername,
         coverBytes: _coverBytes,
         avatarBytes: _avatarBytes,
         onSocialTap: _editSocialLink,

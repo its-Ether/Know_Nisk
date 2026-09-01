@@ -27,12 +27,16 @@ class ProfileView extends StatelessWidget {
     this.onAvatarTap,
     this.onNameTap,
     this.onBioTap,
+    this.onUsernameTap,
     this.onNameEditDone,
     this.onBioEditDone,
+    this.onUsernameEditDone,
     this.nameController,
     this.bioController,
+    this.usernameController,
     this.editingName = false,
     this.editingBio = false,
+    this.editingUsername = false,
     this.coverBytes,
     this.avatarBytes,
     this.publishButton,
@@ -47,14 +51,18 @@ class ProfileView extends StatelessWidget {
   final VoidCallback? onAvatarTap;
   final VoidCallback? onNameTap;
   final VoidCallback? onBioTap;
+  final VoidCallback? onUsernameTap;
   final VoidCallback? onNameEditDone;
   final VoidCallback? onBioEditDone;
+  final VoidCallback? onUsernameEditDone;
 
   /// Editor state.
   final TextEditingController? nameController;
   final TextEditingController? bioController;
+  final TextEditingController? usernameController;
   final bool editingName;
   final bool editingBio;
+  final bool editingUsername;
   final Uint8List? coverBytes;
   final Uint8List? avatarBytes;
 
@@ -201,13 +209,44 @@ class ProfileView extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 4),
-            Text(
-              'Nisk.Niship',
-              style: GoogleFonts.courierPrime(
-                fontSize: 13,
-                color: Colors.blue,
+            if (editingUsername && usernameController != null)
+              SizedBox(
+                width: 220,
+                child: TextField(
+                  controller: usernameController,
+                  autofocus: true,
+                  textAlign: TextAlign.center,
+                  cursorColor: Colors.blue,
+                  style: GoogleFonts.courierPrime(
+                    fontSize: 13,
+                    color: Colors.blue,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    hintText: 'Nisk.Niship',
+                    hintStyle: GoogleFonts.courierPrime(
+                      fontSize: 13,
+                      color: Colors.white24,
+                    ),
+                  ),
+                  onTapOutside: (_) => onUsernameEditDone?.call(),
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: onUsernameTap,
+                child: Text(
+                  (content?.username.isNotEmpty ?? false)
+                      ? content!.username
+                      : 'Nisk.Niship',
+                  style: GoogleFonts.courierPrime(
+                    fontSize: 13,
+                    color: Colors.blue,
+                  ),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(width: 18),

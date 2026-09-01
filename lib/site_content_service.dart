@@ -11,6 +11,7 @@ class SiteContent {
     required this.avatarUrl,
     required this.name,
     required this.bio,
+    this.username = '',
     this.facebookUrl = '',
     this.xUrl = '',
     this.githubUrl = '',
@@ -22,6 +23,9 @@ class SiteContent {
   final String avatarUrl;
   final String name;
   final String bio;
+
+  /// The handle shown under the name on Home (empty = show the default).
+  final String username;
 
   /// Where each social icon on the Home page redirects (empty = not set).
   final String facebookUrl;
@@ -38,6 +42,7 @@ class SiteContent {
       avatarUrl: (data['avatarUrl'] as String?) ?? '',
       name: (data['name'] as String?) ?? '',
       bio: (data['bio'] as String?) ?? '',
+      username: (data['username'] as String?) ?? '',
       facebookUrl: (data['facebookUrl'] as String?) ?? '',
       xUrl: (data['xUrl'] as String?) ?? '',
       githubUrl: (data['githubUrl'] as String?) ?? '',
@@ -50,6 +55,7 @@ class SiteContent {
         'avatarUrl': avatarUrl,
         'name': name,
         'bio': bio,
+        'username': username,
         'facebookUrl': facebookUrl,
         'xUrl': xUrl,
         'githubUrl': githubUrl,

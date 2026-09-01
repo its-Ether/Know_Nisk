@@ -18,6 +18,12 @@ import 'package:know/pages/post_detail_page.dart';
 import 'package:know/posts_service.dart';
 import 'package:know/site_content_service.dart';
 
+/// v11 FontAwesome icons render in `FaIcon` widgets, and `FaIcon.icon`
+/// exposes the wrapped `IconData` — match on that, not byIcon.
+Finder findFaIcon(FaIconData icon) => find.byWidgetPredicate(
+      (widget) => widget is FaIcon && widget.icon == icon.data,
+    );
+
 void main() {
   setUp(() {
     // Tests can't fetch fonts over HTTP; resolve Google Fonts to fallbacks.
@@ -280,7 +286,7 @@ void main() {
     // The Publish pill rides in the social icons row, right of the GitHub
     // icon — not floating on the screen.
     final publishCenter = tester.getCenter(find.text('Publish'));
-    final githubCenter = tester.getCenter(find.byIcon(FontAwesomeIcons.github));
+    final githubCenter = tester.getCenter(findFaIcon(FontAwesomeIcons.github));
     expect((publishCenter.dy - githubCenter.dy).abs(), lessThan(20));
     expect(publishCenter.dx, greaterThan(githubCenter.dx));
   });
@@ -329,7 +335,7 @@ void main() {
 
     // Tapping a social icon opens the popup: icon (not editable) + link
     // field + Save. No Publish while nothing has changed.
-    await tester.tap(find.byIcon(FontAwesomeIcons.github));
+    await tester.tap(findFaIcon(FontAwesomeIcons.github));
     await tester.pumpAndSettle();
     expect(find.text('GitHub'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
@@ -359,7 +365,7 @@ void main() {
 
     // The real redirect happens in a new browser tab; in the test the tap
     // must simply be a no-op that leaves the page intact.
-    await tester.tap(find.byIcon(FontAwesomeIcons.github));
+    await tester.tap(findFaIcon(FontAwesomeIcons.github));
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.text('nisk'), findsOneWidget);
@@ -372,7 +378,7 @@ void main() {
 
     // The icons stay on the right side of the screen — right of the views
     // counter and in the right half of the 800px test surface.
-    final githubCenter = tester.getCenter(find.byIcon(FontAwesomeIcons.github));
+    final githubCenter = tester.getCenter(findFaIcon(FontAwesomeIcons.github));
     final viewsCenter = tester.getCenter(find.text('0'));
     expect(githubCenter.dx, greaterThan(viewsCenter.dx));
     expect(githubCenter.dx, greaterThan(400));
@@ -398,11 +404,11 @@ void main() {
     expect(find.text('N1SK'), findsOneWidget);
     expect(find.text('Nisk.Niship'), findsOneWidget);
     expect(find.text('0'), findsOneWidget);
-    expect(find.byIcon(FontAwesomeIcons.github), findsOneWidget);
+    expect(findFaIcon(FontAwesomeIcons.github), findsOneWidget);
     expect(find.text('Updates'), findsOneWidget);
     // Regression: the icons stay on the SAME line as the views counter on
     // mobile — no vertical shift down from the bigger-screen position.
-    final githubCenter = tester.getCenter(find.byIcon(FontAwesomeIcons.github));
+    final githubCenter = tester.getCenter(findFaIcon(FontAwesomeIcons.github));
     final counterCenter = tester.getCenter(find.text('0'));
     expect((githubCenter.dy - counterCenter.dy).abs(), lessThan(10));
   });
@@ -422,7 +428,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('N1SK'), findsOneWidget);
-    expect(find.byIcon(FontAwesomeIcons.github), findsOneWidget);
+    expect(findFaIcon(FontAwesomeIcons.github), findsOneWidget);
     expect(find.text('0'), findsOneWidget);
   });
 
