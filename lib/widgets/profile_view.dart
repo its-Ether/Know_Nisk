@@ -216,10 +216,10 @@ class ProfileView extends StatelessWidget {
                   controller: usernameController,
                   autofocus: true,
                   textAlign: TextAlign.center,
-                  cursorColor: Colors.blue,
+                  cursorColor: Color(0xFF39FF14), // toxic green
                   style: GoogleFonts.courierPrime(
                     fontSize: 13,
-                    color: Colors.blue,
+                    color: Color(0xFF39FF14), // toxic green
                   ),
                   decoration: InputDecoration(
                     isDense: true,
@@ -243,7 +243,7 @@ class ProfileView extends StatelessWidget {
                       : 'Nisk.Niship',
                   style: GoogleFonts.courierPrime(
                     fontSize: 13,
-                    color: Colors.blue,
+                    color: Color(0xFF39FF14), // toxic green
                   ),
                 ),
               ),
@@ -462,7 +462,7 @@ class ProfileView extends StatelessWidget {
                   updatedOn,
                   style: const TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF2E7D32), // dark green — N1SK
+                    color: Color(0xFF39FF14), // toxic green — N1SK
                   ),
                 ),
               ],
