@@ -462,7 +462,7 @@ class ProfileView extends StatelessWidget {
                   updatedOn,
                   style: const TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF39FF14), // toxic green — N1SK
+                    color: Color(0xFFC6C6C6), // bio is white70 — a touch lighter
                   ),
                 ),
               ],
