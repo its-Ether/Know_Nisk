@@ -159,7 +159,7 @@ class ProfileView extends StatelessWidget {
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.fromBorderSide(
-                    BorderSide(color: Colors.white, width: 0.6),
+                    BorderSide(color: Color(0xFF262626), width: 0.6),
                   ),
                   boxShadow: [
                     BoxShadow(
