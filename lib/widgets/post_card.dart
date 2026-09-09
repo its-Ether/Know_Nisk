@@ -73,7 +73,7 @@ class PostCard extends StatelessWidget {
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.fromBorderSide(
-                        BorderSide(color: Color(0xFF262626), width: 0.6),
+                        BorderSide(color: Color(0xFF7D7D7D), width: 0.6),
                       ),
                       boxShadow: [
                         BoxShadow(
