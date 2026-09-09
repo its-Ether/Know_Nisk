@@ -153,19 +153,36 @@ class ProfileView extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: onAvatarTap,
-              child: CircleAvatar(
-                radius: _avatarRadius,
-                backgroundColor: Colors.white10,
-                backgroundImage: avatarBytes != null
-                    ? MemoryImage(avatarBytes!)
-                    : avatarUrl.isEmpty
-                        ? const AssetImage('assets/avatar_placeholder.png')
-                        : NetworkImage(avatarUrl),
-                // A failed load keeps the placeholder fallback.
-                onBackgroundImageError: avatarBytes != null ||
-                        avatarUrl.isNotEmpty
-                    ? (_, _) {}
-                    : null,
+              // White ring + soft translucent glow, so the circle lifts
+              // off the dark background instead of sitting on it.
+              child: Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.fromBorderSide(
+                    BorderSide(color: Colors.white, width: 2),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x59FFFFFF), // white @ 35% — soft halo
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: _avatarRadius,
+                  backgroundColor: Colors.white10,
+                  backgroundImage: avatarBytes != null
+                      ? MemoryImage(avatarBytes!)
+                      : avatarUrl.isEmpty
+                          ? const AssetImage('assets/avatar_placeholder.png')
+                          : NetworkImage(avatarUrl),
+                  // A failed load keeps the placeholder fallback.
+                  onBackgroundImageError: avatarBytes != null ||
+                          avatarUrl.isNotEmpty
+                      ? (_, _) {}
+                      : null,
+                ),
               ),
             ),
             const SizedBox(height: 12),
