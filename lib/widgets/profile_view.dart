@@ -153,19 +153,19 @@ class ProfileView extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: onAvatarTap,
-              // White ring + soft translucent glow, so the circle lifts
-              // off the dark background instead of sitting on it.
+              // Hairline white ring + faint translucent glow, so the circle
+              // lifts off the dark background instead of sitting on it.
               child: Container(
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.fromBorderSide(
-                    BorderSide(color: Colors.white, width: 2),
+                    BorderSide(color: Colors.white, width: 0.6),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0x59FFFFFF), // white @ 35% — soft halo
-                      blurRadius: 18,
-                      spreadRadius: 2,
+                      color: Color(0x2EFFFFFF), // white @ 18% — faint halo
+                      blurRadius: 10,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),

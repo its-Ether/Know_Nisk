@@ -68,15 +68,31 @@ class PostCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.white10,
-                    backgroundImage: avatarUrl.isEmpty
-                        ? const AssetImage('assets/avatar_placeholder.png')
-                        : NetworkImage(avatarUrl),
-                    onBackgroundImageError: avatarUrl.isEmpty
-                        ? null
-                        : (_, _) {},
+                  // Same ring + faint halo as the profile avatar (N1SK).
+                  Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.fromBorderSide(
+                        BorderSide(color: Colors.white, width: 0.6),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x2EFFFFFF), // white @ 18% — faint halo
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.white10,
+                      backgroundImage: avatarUrl.isEmpty
+                          ? const AssetImage('assets/avatar_placeholder.png')
+                          : NetworkImage(avatarUrl),
+                      onBackgroundImageError: avatarUrl.isEmpty
+                          ? null
+                          : (_, _) {},
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -85,7 +101,9 @@ class PostCard extends StatelessWidget {
                       children: [
                         Text(
                           name,
+                          // Same face as the profile name (N1SK).
                           style: const TextStyle(
+                            fontFamily: 'Sekuya',
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
