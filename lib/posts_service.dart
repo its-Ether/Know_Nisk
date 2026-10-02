@@ -1,6 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// The label of the catch-all tab — every post, whatever its folder.
 const String updatesTabLabel = 'Updates';
@@ -36,15 +35,15 @@ class Post {
   /// How many times the post has been opened (tapped).
   final int views;
 
-  /// When the post was published (server timestamp).
+  /// When the post was published.
   final DateTime? createdAt;
 
-  /// When the post was last edited (server timestamp); null = never edited.
+  /// When the post was last edited; null = never edited.
   final DateTime? updatedAt;
 
   factory Post.fromData(String id, Map<String, dynamic> data) {
-    final created = data['createdAt'];
-    final updated = data['updatedAt'];
+    DateTime? parseDate(Object? value) =>
+        value is String ? DateTime.tryParse(value) : null;
     return Post(
       id: id,
       folder: (data['folder'] as String?) ?? '',
@@ -52,12 +51,12 @@ class Post {
       images: ((data['images'] as List?) ?? const [])
           .map((e) => e.toString())
           .toList(),
-      videoUrl: (data['videoUrl'] as String?) ?? '',
-      linkUrl: (data['linkUrl'] as String?) ?? '',
-      coverUrl: (data['coverUrl'] as String?) ?? '',
+      videoUrl: (data['video_url'] as String?) ?? '',
+      linkUrl: (data['link_url'] as String?) ?? '',
+      coverUrl: (data['cover_url'] as String?) ?? '',
       views: (data['views'] as num?)?.toInt() ?? 0,
-      createdAt: created is Timestamp ? created.toDate() : null,
-      updatedAt: updated is Timestamp ? updated.toDate() : null,
+      createdAt: parseDate(data['created_at']),
+      updatedAt: parseDate(data['updated_at']),
     );
   }
 
@@ -65,16 +64,16 @@ class Post {
         'folder': folder,
         'text': text,
         'images': images,
-        'videoUrl': videoUrl,
-        'linkUrl': linkUrl,
-        'coverUrl': coverUrl,
+        'video_url': videoUrl,
+        'link_url': linkUrl,
+        'cover_url': coverUrl,
         'views': views,
       };
 }
 
-/// In-memory posts for the widget tree, fed by the Firestore stream
-/// subscribed in `main()` — the same Firebase-free pattern as
-/// [SiteContentState], so the widget tests run without a Firebase app.
+/// In-memory posts for the widget tree, fed by the Supabase realtime stream
+/// subscribed in `main()` — the same backend-free pattern as
+/// [SiteContentState], so the widget tests run without a database.
 class PostsState {
   PostsState._();
 
@@ -92,26 +91,32 @@ class PostsState {
   }
 }
 
-/// Reads and writes posts (`posts` in Firestore, attachments in Storage
-/// under `posts/`).
+/// Reads and writes posts (the `posts` table in Postgres, attachments in
+/// the `posts` storage bucket).
 class PostsService {
   PostsService._();
 
   static final PostsService instance = PostsService._();
 
-  CollectionReference<Map<String, dynamic>> get _posts =>
-      FirebaseFirestore.instance.collection('posts');
+  SupabaseClient get _client => Supabase.instance.client;
 
   /// Live stream of all posts, newest first.
   Stream<List<Post>> watchPosts() {
-    return _posts.orderBy('createdAt', descending: true).snapshots().map(
-          (snapshot) => [
-            for (final doc in snapshot.docs) Post.fromData(doc.id, doc.data()),
-          ],
-        );
+    return _client.from('posts').stream(primaryKey: ['id']).map((rows) {
+      final posts = [
+        for (final row in rows) Post.fromData(row['id'] as String, row),
+      ];
+      posts.sort(
+        (a, b) => (b.createdAt ?? DateTime(2000))
+            .compareTo(a.createdAt ?? DateTime(2000)),
+      );
+      return posts;
+    });
   }
 
-  /// Publishes a new post and returns its id.
+  /// Publishes a new post and returns its id. The server stamps the
+  /// publish time itself (`created_at` defaults to now() in the database —
+  /// the Postgres version of a server timestamp).
   Future<String> createPost({
     required String folder,
     required String text,
@@ -120,52 +125,51 @@ class PostsService {
     String linkUrl = '',
     String coverUrl = '',
   }) async {
-    final ref = await _posts.add({
+    final row = await _client.from('posts').insert({
       'folder': folder,
       'text': text,
       'images': images,
-      'videoUrl': videoUrl,
-      'linkUrl': linkUrl,
-      'coverUrl': coverUrl,
+      'video_url': videoUrl,
+      'link_url': linkUrl,
+      'cover_url': coverUrl,
       'views': 0,
-      'createdAt': FieldValue.serverTimestamp(),
-      // No updatedAt on creation — a brand-new post was never edited.
-    });
-    return ref.id;
+    }).select('id').single();
+    return row['id'] as String;
   }
 
-  /// Overwrites a post in place, keeping its original publish time and view
-  /// count, so an edit doesn't reorder the feed or reset the stats. Marks
-  /// the post as edited with a fresh `updatedAt` server timestamp.
+  /// Overwrites a post in place, keeping its original publish time and
+  /// view count (the update never touches `created_at`), so an edit doesn't
+  /// reorder the feed or reset the stats. Marks the post as edited with a
+  /// fresh `updated_at`.
   Future<void> updatePost(Post post) async {
-    await _posts.doc(post.id).set({
+    await _client.from('posts').update({
       ...post.toData(),
-      'createdAt': post.createdAt != null
-          ? Timestamp.fromDate(post.createdAt!)
-          : FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', post.id);
   }
 
   Future<void> deletePost(String id) async {
-    await _posts.doc(id).delete();
+    await _client.from('posts').delete().eq('id', id);
   }
 
-  /// Counts one more view on the post. The Firestore rules let anyone
-  /// increment just this field, so the counter works without signing in.
+  /// Counts one more view on the post — the server-side "+1 only"
+  /// vending machine; works without signing in.
   Future<void> incrementViews(String id) async {
-    await _posts.doc(id).update({'views': FieldValue.increment(1)});
+    await _client.rpc('increment_post_views', params: {'p_post_id': id});
   }
 
-  /// Uploads an attachment (image or video) to Storage and returns its
-  /// public download URL.
+  /// Uploads an attachment (image or video) to the `posts` bucket and
+  /// returns its public URL.
   Future<String> uploadFile({
     required Uint8List bytes,
     required String name,
     required String contentType,
   }) async {
-    final ref = FirebaseStorage.instance.ref('posts/$name');
-    await ref.putData(bytes, SettableMetadata(contentType: contentType));
-    return ref.getDownloadURL();
+    await _client.storage.from('posts').uploadBinary(
+          name,
+          bytes,
+          fileOptions: FileOptions(contentType: contentType),
+        );
+    return _client.storage.from('posts').getPublicUrl(name);
   }
 }

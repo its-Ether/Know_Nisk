@@ -12,7 +12,7 @@ import '../widgets/profile_view.dart';
 ///
 /// The whole screen is the shared [ProfileView] (cover, avatar, name,
 /// username, bio, updated-on, views, folder tabs + post feed) fed by the
-/// site content and posts from Firestore. Until content exists, the
+/// site content and posts from the database. Until content exists, the
 /// approved placeholder art + text are shown. Content is edited on
 /// `/admin-editor` and published live.
 class HomePage extends StatefulWidget {
@@ -31,7 +31,7 @@ class _HomePageState extends State<HomePage> {
 
   /// Counts one site view, but at most once per browser per 24 hours — the
   /// header counter would otherwise inflate on every refresh. All failures
-  /// are swallowed: no Firestore in widget tests, and an offline viewer
+  /// are swallowed: no database in widget tests, and an offline viewer
   /// should still see the page.
   void _maybeCountSiteView() {
     try {
@@ -55,7 +55,7 @@ class _HomePageState extends State<HomePage> {
 
   /// Opens the full post popup. Each open counts as a view on the post;
   /// failures are ignored so a broken counter never breaks the page (there
-  /// is no Firestore in widget tests).
+  /// is no database in widget tests).
   void _openPost(
     BuildContext context,
     Post post,

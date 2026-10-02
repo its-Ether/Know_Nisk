@@ -18,8 +18,9 @@ import 'post_composer_page.dart';
 /// name/bio swap in place to identically-styled text fields; the images open
 /// the picker); tapping a social icon opens a popup to set where that icon
 /// redirects. A **Publish** pill appears in the social icons row only once
-/// something has changed — it uploads new images to Firebase Storage and
-/// writes `admin/site` in Firestore, which the public Home page picks up live.
+/// something has changed — it uploads new images to the Supabase `images`
+/// bucket and writes the `site_content` row, which the public Home page
+/// picks up live.
 class AdminEditorPage extends StatefulWidget {
   const AdminEditorPage({super.key});
 

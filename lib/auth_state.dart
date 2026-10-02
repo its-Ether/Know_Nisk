@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-/// In-memory signed-in state for routing, fed by `FirebaseAuth`'s stream in
-/// `main()`. Kept out of the widget tree so tests run without a Firebase app.
+/// In-memory signed-in state for routing, fed by Supabase auth's stream in
+/// `main()`. Kept out of the widget tree so tests run without a backend.
 class AuthState {
   AuthState._();
 

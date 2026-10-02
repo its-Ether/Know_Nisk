@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:go_router/go_router.dart';
 
 import '../auth_state.dart';
@@ -7,11 +7,11 @@ import '../auth_state.dart';
 /// Admin — the admin sign-in page of Know N1SK, served at `/admin`.
 ///
 /// Email + password only, no sign-up: N1SK creates the credentials manually
-/// in the Firebase console. A successful sign-in marks [AuthState] and
+/// in the Supabase dashboard. A successful sign-in marks [AuthState] and
 /// redirects to `/admin-editor` (the editor, signed-in access only).
 ///
-/// The page never touches [FirebaseAuth] during build — only in the button
-/// handler — so the widget tests can render it without a Firebase app.
+/// The page never touches the Supabase client during build — only in the
+/// button handler — so the widget tests can render it without a backend.
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
 
@@ -39,14 +39,14 @@ class _AdminPageState extends State<AdminPage> {
       _error = null;
     });
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
       if (!mounted) return;
       AuthState.instance.signedIn.value = true;
       context.go('/admin-editor');
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _error = _messageFor(e));
     } finally {
@@ -55,20 +55,19 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   /// Maps auth failures to short, human-readable messages.
-  String _messageFor(FirebaseAuthException e) {
+  String _messageFor(AuthException e) {
     switch (e.code) {
-      case 'invalid-email':
-        return 'That email address doesn\u2019t look valid.';
-      case 'invalid-credential':
-      case 'user-not-found':
-      case 'wrong-password':
+      case 'invalid_credentials':
+      case 'user_not_found':
         return 'Incorrect email or password.';
-      case 'too-many-requests':
+      case 'email_not_confirmed':
+        return 'This account hasn\u2019t been confirmed yet.';
+      case 'over_request_rate_limit':
         return 'Too many attempts — try again later.';
-      case 'network-request-failed':
+      case 'network_error':
         return 'Network error — check your connection.';
       default:
-        return 'Sign-in failed: ${e.message ?? e.code}';
+        return 'Sign-in failed: ${e.message}';
     }
   }
 

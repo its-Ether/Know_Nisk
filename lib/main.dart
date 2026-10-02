@@ -1,12 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import 'auth_state.dart';
 import 'favicon.dart';
-import 'firebase_options.dart';
 import 'pages/admin_editor_page.dart';
 import 'pages/admin_page.dart';
 import 'pages/home_page.dart';
@@ -18,14 +16,18 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Use clean paths (/admin) instead of the default hash URLs (#/admin).
   usePathUrlStrategy();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Supabase.initialize(
+    url: 'https://yrjcrlgchhfpqihzxglj.supabase.co',
+    publishableKey: 'sb_publishable_-LI6DwvxZdQEOQgmrGmOag_dqiXfud_',
+  );
   // Seed auth state before the router builds, so a direct load of
   // /admin-editor keeps signed-in users in and redirects everyone else.
-  AuthState.instance.signedIn.value = FirebaseAuth.instance.currentUser != null;
-  FirebaseAuth.instance.authStateChanges().listen(
-    (user) => AuthState.instance.signedIn.value = user != null,
+  final client = Supabase.instance.client;
+  AuthState.instance.signedIn.value = client.auth.currentSession != null;
+  client.auth.onAuthStateChange.listen(
+    (data) => AuthState.instance.signedIn.value = data.session != null,
   );
-  // Feed the Home page + editor from Firestore; publishing in the editor
+  // Feed the Home page + editor from Postgres; publishing in the editor
   // then shows up live (errors keep the last known content).
   SiteContentService.instance.watch().listen(
     (content) {

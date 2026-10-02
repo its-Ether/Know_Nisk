@@ -25,7 +25,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   void initState() {
     super.initState();
     // Opening a post through its shared link counts as a view. Failures are
-    // ignored (there is no Firestore in widget tests).
+    // ignored (there is no database in widget tests).
     if (!_counted) {
       _counted = true;
       unawaited(
