@@ -1,14 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../format_utils.dart';
 import '../posts_service.dart';
 import '../site_content_service.dart';
 import 'posts_section.dart';
+import 'socials_dialog.dart';
 
 /// The Home page's profile block, shared verbatim by the Home page and the
 /// admin editor — one source of layout, so the editor is always an exact
@@ -40,7 +39,7 @@ class ProfileView extends StatelessWidget {
     this.coverBytes,
     this.avatarBytes,
     this.publishButton,
-    this.onSocialTap,
+    this.onSocialsTap,
     this.onPostTap,
   });
 
@@ -71,10 +70,11 @@ class ProfileView extends StatelessWidget {
   /// changes), so the row stays a pixel replica of Home otherwise.
   final Widget? publishButton;
 
-  /// Editor hook — tapping a social icon calls it with its key
-  /// (`'facebook'` | `'x'` | `'github'`). Null on the public Home page,
-  /// where the icons instead open their published links in a new tab.
-  final void Function(String social)? onSocialTap;
+  /// Editor hook — tapping the whole social icons area calls it (the
+  /// editor opens the editable socials dialog). Null on the public Home
+  /// page, where the tap instead opens the viewer dialog showing every
+  /// slot's icon + title + link.
+  final VoidCallback? onSocialsTap;
 
   /// What a tap on a post in the feed does — the Home page opens the
   /// full-post popup, the admin editor opens its manage dialog. Null keeps
@@ -119,6 +119,18 @@ class ProfileView extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return 'Updated on: ${_months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  /// Opens the socials viewer dialog (public Home): every slot's icon +
+  /// title + link, tappable rows for live slots. When no slot has a link
+  /// yet the whole area stays inert — nothing to show, nothing to open.
+  void _openSocialsDialog(BuildContext context, List<SocialLink> socials) {
+    if (!socials.any((social) => social.isLive)) return;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black,
+      builder: (_) => SocialsDialog.viewer(socials: socials),
+    );
   }
 
   @override
@@ -233,10 +245,10 @@ class ProfileView extends StatelessWidget {
                   controller: usernameController,
                   autofocus: true,
                   textAlign: TextAlign.center,
-                  cursorColor: Color(0xFF39FF14), // toxic green
+                  cursorColor: Color(0xFF297FFF), // azure
                   style: GoogleFonts.courierPrime(
                     fontSize: 13,
-                    color: Color(0xFF39FF14), // toxic green
+                    color: Color(0xFF297FFF), // azure
                   ),
                   decoration: InputDecoration(
                     isDense: true,
@@ -260,7 +272,7 @@ class ProfileView extends StatelessWidget {
                       : 'Nisk.Niship',
                   style: GoogleFonts.courierPrime(
                     fontSize: 13,
-                    color: Color(0xFF39FF14), // toxic green
+                    color: Color(0xFF297FFF), // azure
                   ),
                 ),
               ),
@@ -304,31 +316,68 @@ class ProfileView extends StatelessWidget {
       ],
     );
 
-    // Row 1: the social handle icons. On Home they open their published
-    // links in a new tab; in the editor (when onSocialTap is set) a tap
-    // opens the link editor popup instead. The admin editor also appends
-    // its Publish control to this row while unsaved changes exist.
+    // Row 1: the social slots. The whole icons area is ONE click zone —
+    // on Home a tap opens the viewer dialog (icon + title + link of every
+    // slot); in the editor (when onSocialsTap is set) the tap opens the
+    // editable dialog instead. The first three slots show as icons, and a
+    // "+N" chip after them counts the rest, so any number of socials fits
+    // the header without ever overflowing. The admin editor's Publish
+    // control rides at the end of the row, OUTSIDE the click zone.
+    final socials = content?.socials ?? SiteContent.defaultSocials;
+    final anyLive = socials.any((social) => social.isLive);
+    final clickable = onSocialsTap != null || anyLive;
+    final socialsArea = MouseRegion(
+      cursor:
+          clickable ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: clickable
+            ? onSocialsTap ?? () => _openSocialsDialog(context, socials)
+            : null,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < socials.length && i < 3; i++)
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: SocialIconView(
+                  social: socials[i],
+                  size: 22,
+                  greyed: !socials[i].isLive,
+                ),
+              ),
+            // More than three slots: the chip tells viewers there are
+            // more behind the tap, in the same pill language as the
+            // views counter.
+            if (socials.length > 3)
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '+${socials.length - 3}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
     final socialIcons = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SocialIcon(
-          icon: FontAwesomeIcons.facebookF,
-          label: 'Facebook',
-          url: content?.facebookUrl ?? '',
-          onTap: onSocialTap == null ? null : () => onSocialTap!('facebook'),
-        ),
-        _SocialIcon(
-          icon: FontAwesomeIcons.xTwitter,
-          label: 'X',
-          url: content?.xUrl ?? '',
-          onTap: onSocialTap == null ? null : () => onSocialTap!('x'),
-        ),
-        _SocialIcon(
-          icon: FontAwesomeIcons.github,
-          label: 'GitHub',
-          url: content?.githubUrl ?? '',
-          onTap: onSocialTap == null ? null : () => onSocialTap!('github'),
-        ),
+        socialsArea,
         if (publishButton != null)
           Padding(
             padding: const EdgeInsets.only(left: 16),
@@ -478,8 +527,11 @@ class ProfileView extends StatelessWidget {
                 Text(
                   updatedOn,
                   style: const TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFFC6C6C6), // bio is white70 — a touch lighter
+                    fontSize: 13,
+                    // Dimmer + smaller than the bio (white70 @ 15px) so
+                    // the two read as different whites — same muted voice
+                    // as the post timestamps.
+                    color: Colors.white54,
                   ),
                 ),
               ],
@@ -493,58 +545,6 @@ class ProfileView extends StatelessWidget {
             onPostTap: onPostTap,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SocialIcon extends StatelessWidget {
-  const _SocialIcon({
-    required this.icon,
-    required this.label,
-    this.url,
-    this.onTap,
-  });
-
-  final FaIconData icon;
-  final String label;
-
-  /// The published link on the public Home page (empty = not set).
-  final String? url;
-
-  /// Editor mode: what tapping the icon does instead of opening [url].
-  final VoidCallback? onTap;
-
-  /// Opens [url] in a new browser tab. Adds https:// when the admin typed a
-  /// bare domain; failures are ignored so a bad link never breaks the page.
-  Future<void> _openLink() async {
-    try {
-      var target = url!.trim();
-      if (!target.startsWith('http://') && !target.startsWith('https://')) {
-        target = 'https://$target';
-      }
-      await launchUrl(Uri.parse(target), webOnlyWindowName: '_blank');
-    } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final child = Padding(
-      padding: const EdgeInsets.only(left: 16),
-      child: Tooltip(
-        message: label,
-                        child: FaIcon(icon, size: 22, color: Colors.white70),
-      ),
-    );
-    final editable = onTap != null;
-    final hasLink = url != null && url!.isNotEmpty;
-    if (!editable && !hasLink) return child;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap ?? _openLink,
-        child: child,
       ),
     );
   }

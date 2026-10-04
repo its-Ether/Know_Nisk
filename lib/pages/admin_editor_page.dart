@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -8,6 +7,7 @@ import '../image_utils.dart';
 import '../posts_service.dart';
 import '../site_content_service.dart';
 import '../widgets/profile_view.dart';
+import '../widgets/socials_dialog.dart';
 import 'post_composer_page.dart';
 
 /// Admin editor — served at `/admin-editor`, reachable only while signed in
@@ -16,8 +16,8 @@ import 'post_composer_page.dart';
 /// The page IS the Home page: the same [ProfileView] replica, nothing added.
 /// Tapping the cover, avatar, name or bio makes that element editable (the
 /// name/bio swap in place to identically-styled text fields; the images open
-/// the picker); tapping a social icon opens a popup to set where that icon
-/// redirects. A **Publish** pill appears in the social icons row only once
+/// the picker); tapping the social icons area opens the socials dialog,
+/// where every slot's icon, title and link can be edited at once. A **Publish** pill appears in the social icons row only once
 /// something has changed — it uploads new images to the Supabase `images`
 /// bucket and writes the `site_content` row, which the public Home page
 /// picks up live.
@@ -41,9 +41,11 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
   Uint8List? _coverBytes;
   Uint8List? _avatarBytes;
 
-  /// Unsaved social handle links, keyed by `'facebook' | 'x' | 'github'`;
-  /// seeded from the published content and updated by the link popup.
-  final Map<String, String> _pendingLinks = {'facebook': '', 'x': '', 'github': ''};
+  /// Unsaved social slot edits (the full editable list); null = unchanged,
+  /// so the published list shows. Set when the socials dialog returns a
+  /// changed list — the Publish pill appears, and publish uploads any
+  /// newly picked custom icons and pushes the list live.
+  List<SocialEdit>? _pendingSocials;
 
   /// True once anything has been edited — shows the Publish pill.
   bool _dirty = false;
@@ -101,9 +103,6 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
     _syncedName = _nameController.text;
     _syncedBio = _bioController.text;
     _syncedUsername = _usernameController.text;
-    _pendingLinks['facebook'] = content.facebookUrl;
-    _pendingLinks['x'] = content.xUrl;
-    _pendingLinks['github'] = content.githubUrl;
   }
 
   void _onTextChanged() {
@@ -139,36 +138,51 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
     return picked?.readAsBytes();
   }
 
-  /// Opens the link-editing popup for the tapped social icon. Saving a link
-  /// that differs from what's currently pending marks the page dirty so the
-  /// Publish pill appears.
-  Future<void> _editSocialLink(String social) async {
-    final saved = await showDialog<String>(
+  /// Opens the socials dialog: every slot's icon, title and link editable
+  /// at once, plus add/remove. Done returns the full list; it only marks
+  /// the page dirty (so the Publish pill appears) when something actually
+  /// changed — new icons, different links, or a different slot count.
+  Future<void> _editSocials() async {
+    final current = SiteContentState.instance.content.value;
+    final initial = _pendingSocials != null
+        ? [for (final edit in _pendingSocials!) edit.link]
+        : current?.socials ?? SiteContent.defaultSocials;
+    final result = await showDialog<List<SocialEdit>>(
       context: context,
-      builder: (_) => _SocialLinkDialog(
-        icon: _socialIcons[social]!,
-        label: _socialLabels[social]!,
-        initialLink: _pendingLinks[social] ?? '',
-      ),
+      barrierColor: Colors.black,
+      builder: (_) => SocialsDialog.editor(socials: initial),
     );
-    if (saved == null || saved == (_pendingLinks[social] ?? '')) return;
+    if (result == null || !mounted) return;
+    final links = [for (final edit in result) edit.link];
+    final changed = result.any((edit) => edit.newIconBytes != null) ||
+        !_sameList(links, initial);
+    if (!changed) return;
     setState(() {
-      _pendingLinks[social] = saved;
+      _pendingSocials = result;
       _dirty = true;
     });
   }
 
-  static const Map<String, FaIconData> _socialIcons = {
-    'facebook': FontAwesomeIcons.facebookF,
-    'x': FontAwesomeIcons.xTwitter,
-    'github': FontAwesomeIcons.github,
-  };
+  /// Element-wise comparison of two slot lists (titles, links, icons).
+  bool _sameList(List<SocialLink> a, List<SocialLink> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
-  static const Map<String, String> _socialLabels = {
-    'facebook': 'Facebook',
-    'x': 'X',
-    'github': 'GitHub',
-  };
+  /// Uploads a newly picked custom social icon (downscaled to 256px — the
+  /// icons render at 22px, so 256 covers even the densest screens) and
+  /// returns its public URL.
+  Future<String> _uploadIcon(Uint8List bytes) async {
+    final prepared = prepareImageForUpload(bytes, maxWidth: 256);
+    return SiteContentService.instance.uploadImage(
+      bytes: prepared.bytes,
+      name: 'icon_${DateTime.now().millisecondsSinceEpoch}.${prepared.ext}',
+      contentType: prepared.contentType,
+    );
+  }
 
   Future<void> _publish() async {
     setState(() {
@@ -202,6 +216,24 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
         );
       }
 
+      // The social slots: keep the published list, or apply the pending
+      // edits — uploading any newly picked custom icons (the avatar
+      // pipeline, shrunk to icon size) and pointing the slots at them.
+      final List<SocialLink> socials;
+      if (_pendingSocials != null) {
+        socials = [
+          for (final edit in _pendingSocials!)
+            if (edit.newIconBytes != null)
+              edit.link.copyWith(
+                iconUrl: await _uploadIcon(edit.newIconBytes!),
+              )
+            else
+              edit.link,
+        ];
+      } else {
+        socials = current?.socials ?? SiteContent.defaultSocials;
+      }
+
       await service.publish(
         SiteContent(
           coverUrl: coverUrl,
@@ -209,9 +241,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
           name: _nameController.text.trim(),
           bio: _bioController.text.trim(),
           username: _usernameController.text.trim(),
-          facebookUrl: _pendingLinks['facebook'] ?? '',
-          xUrl: _pendingLinks['x'] ?? '',
-          githubUrl: _pendingLinks['github'] ?? '',
+          socials: socials,
         ),
       );
       if (!mounted) return;
@@ -219,6 +249,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
         _dirty = false;
         _coverBytes = null;
         _avatarBytes = null;
+        _pendingSocials = null;
         // What was just published is now the baseline.
         _syncedName = _nameController.text;
         _syncedBio = _bioController.text;
@@ -381,7 +412,7 @@ class _AdminEditorPageState extends State<AdminEditorPage> {
         editingUsername: _editingUsername,
         coverBytes: _coverBytes,
         avatarBytes: _avatarBytes,
-        onSocialTap: _editSocialLink,
+        onSocialsTap: _editSocials,
         onPostTap: _managePost,
         publishButton: _dirty || _publishing
             ? _PublishButton(
@@ -485,99 +516,3 @@ class _PublishButton extends StatelessWidget {
   }
 }
 
-/// Popup card for setting one social handle's link. Shows the (non-editable)
-/// icon followed by the link field; Save pops the trimmed link back to the
-/// editor, which marks the page dirty so the Publish pill appears.
-class _SocialLinkDialog extends StatefulWidget {
-  const _SocialLinkDialog({
-    required this.icon,
-    required this.label,
-    required this.initialLink,
-  });
-
-  final FaIconData icon;
-  final String label;
-  final String initialLink;
-
-  @override
-  State<_SocialLinkDialog> createState() => _SocialLinkDialogState();
-}
-
-class _SocialLinkDialogState extends State<_SocialLinkDialog> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initialLink,
-  );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _save() => Navigator.pop(context, _controller.text.trim());
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF0D0D0D),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Colors.white12),
-      ),
-      title: Row(
-        children: [
-          FaIcon(widget.icon, size: 22, color: Colors.white70),
-          const SizedBox(width: 10),
-          Text(
-            widget.label,
-            style: const TextStyle(color: Colors.white, fontSize: 17),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: 320,
-        child: TextField(
-          controller: _controller,
-          autofocus: true,
-          cursorColor: Colors.white70,
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: Colors.white10,
-            hintText: 'https://…',
-            hintStyle: const TextStyle(color: Colors.white24),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Colors.white24),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Colors.blue),
-            ),
-          ),
-          onSubmitted: (_) => _save(),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Cancel',
-            style: TextStyle(color: Colors.white54),
-          ),
-        ),
-        FilledButton(
-          onPressed: _save,
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-          ),
-          child: const Text(
-            'Save',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    );
-  }
-}

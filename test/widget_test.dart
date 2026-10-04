@@ -322,9 +322,8 @@ void main() {
     expect(find.text('Write a bio…'), findsOneWidget);
   });
 
-  testWidgets('social icon tap opens the link popup; Save reveals Publish', (
-    tester,
-  ) async {
+  testWidgets('socials area tap opens the editor dialog; Done reveals Publish',
+      (tester) async {
     AuthState.instance.signedIn.value = true;
     await tester.pumpWidget(const KnowN1SKApp());
     tester
@@ -333,24 +332,28 @@ void main() {
         .go('/admin-editor');
     await tester.pumpAndSettle();
 
-    // Tapping a social icon opens the popup: icon (not editable) + link
-    // field + Save. No Publish while nothing has changed.
+    // Tapping anywhere on the socials area opens ONE dialog with ALL
+    // THREE slots editable at once: each slot is a title field + a link
+    // field (6 fields), plus add/remove — no per-icon popups anymore.
     await tester.tap(findFaIcon(FontAwesomeIcons.github));
     await tester.pumpAndSettle();
-    expect(find.text('GitHub'), findsOneWidget);
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('Save'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(6));
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('Add social'), findsOneWidget);
     expect(find.text('Publish'), findsNothing);
 
-    // Filling the link and saving closes the popup and marks the page dirty.
-    await tester.enterText(find.byType(TextField), 'github.com/nisk');
-    await tester.tap(find.text('Save'));
+    // Filling a link and tapping Done closes the dialog and marks the
+    // page dirty — the Publish pill appears. Slot order is Facebook, X,
+    // GitHub, each slot a title field followed by its link field — the
+    // GitHub link is field index 5.
+    await tester.enterText(find.byType(TextField).at(5), 'github.com/nisk');
+    await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
-    expect(find.text('Save'), findsNothing);
+    expect(find.text('Done'), findsNothing);
     expect(find.text('Publish'), findsOneWidget);
   });
 
-  testWidgets('home social icon tap with a link never breaks the page', (
+  testWidgets('home socials tap opens the viewer dialog, page stays intact', (
     tester,
   ) async {
     SiteContentState.instance.content.value = const SiteContent(
@@ -358,17 +361,19 @@ void main() {
       avatarUrl: '',
       name: 'nisk',
       bio: 'bio',
-      githubUrl: 'github.com/nisk',
+      socials: [SocialLink(title: 'GitHub', link: 'github.com/nisk')],
     );
     await tester.pumpWidget(const KnowN1SKApp());
     await tester.pumpAndSettle();
 
-    // The real redirect happens in a new browser tab; in the test the tap
-    // must simply be a no-op that leaves the page intact.
+    // Tapping the icons area opens the socials dialog — the slot's icon +
+    // title + link — while the page stays intact behind it.
     await tester.tap(findFaIcon(FontAwesomeIcons.github));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('nisk'), findsOneWidget);
+    expect(find.text('GitHub'), findsOneWidget);
+    expect(find.text('github.com/nisk'), findsOneWidget);
   });
 
   testWidgets('social icons sit on the far right, level with the name', (
