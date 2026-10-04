@@ -1,4 +1,6 @@
-/// Keeps the browser tab icon in step with the site's profile picture.
+/// Keeps the site's icon identity (the bundled Nisk-Fav image) on the
+/// browser tab and the iOS home screen — fixed, independent of the
+/// profile picture.
 /// Widget tests run on the Dart VM where the browser DOM doesn't exist, so
 /// the web implementation is conditionally imported and the VM falls back
 /// to a no-op stub (same pattern as browser_storage.dart).

@@ -32,7 +32,7 @@ Future<void> main() async {
   SiteContentService.instance.watch().listen(
     (content) {
       SiteContentState.instance.content.value = content;
-      // The browser tab icon follows the profile picture.
+      // The browser tab icon wears the fixed Nisk-Fav face.
       syncFavicon(content?.avatarUrl);
     },
     onError: (Object _) {},
