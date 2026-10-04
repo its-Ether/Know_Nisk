@@ -1,3 +1,10 @@
+================================================================================
+HISTORICAL DOCUMENT - FIREBASE ERA (pre-2026-10-02 migration)
+Kept for reference only. This file does NOT describe the live system.
+For the current, accurate picture, read the top-level README.md and
+Spacenisk/Know_Nisk/Know_Nisk_Project_Record.txt.
+================================================================================
+
 # INSTRUCTION.md — The Consciousness File
 
 > This file is the single source of truth for the entire project.
