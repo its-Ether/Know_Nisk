@@ -2,7 +2,7 @@
 
 A personal profile website for **Nisk** — styled like an X/Twitter profile on a pure-black canvas: cover photo, avatar, name, bio, social icons, a live view counter, and a tabbed posts feed.
 
-**Live site:** https://know-nisk.netlify.app
+**Live site:**nisk.devs.surf
 
 ## What it does
 
