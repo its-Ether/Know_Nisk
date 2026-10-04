@@ -39,8 +39,6 @@ migrate_working_dir/
 # directly (manual deploy). Every deploy = rebuild + commit build/web.
 !/build/web/
 
-# Firebase CLI local cache (deploy bookkeeping, not project files)
-.firebase/
 
 # Symbolication related
 app.*.symbols
