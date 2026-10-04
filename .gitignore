@@ -34,7 +34,10 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+/build/*
+# ...but the built web app IS committed on purpose: Vercel serves it
+# directly (manual deploy). Every deploy = rebuild + commit build/web.
+!/build/web/
 
 # Firebase CLI local cache (deploy bookkeeping, not project files)
 .firebase/
